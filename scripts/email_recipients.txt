@@ -1,0 +1,4 @@
+# TileOPs Nightly Report email recipients
+# One email address per line. Lines starting with '#' are comments.
+gaoang0125@163.com
+yuchong.li@aigcic.com

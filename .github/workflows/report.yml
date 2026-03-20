@@ -355,9 +355,9 @@ jobs:
         continue-on-error: true
         run: |
           python scripts/send_report_email.py \
-            --html-file "${{ steps.report.outputs.report_dir }}/report.html" \
-            --subject   "TileOPs Nightly Report ${{ steps.report.outputs.date }}" \
-            --to        gaoang0125@163.com
+            --html-file        "${{ steps.report.outputs.report_dir }}/report.html" \
+            --subject          "TileOPs Nightly Report ${{ steps.report.outputs.date }}" \
+            --recipients-file  scripts/email_recipients.txt
         env:
           MAIL_SMTP_SERVER: ${{ secrets.MAIL_SMTP_SERVER }}
           MAIL_SMTP_PORT:   ${{ secrets.MAIL_SMTP_PORT }}

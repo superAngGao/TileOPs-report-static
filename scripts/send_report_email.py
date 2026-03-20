@@ -5,7 +5,13 @@ Usage:
     python send_report_email.py \
         --html-file  <path to report.html> \
         --subject    "TileOPs Nightly Report 20260318_220000" \
-        --to         gaoang0125@163.com
+        --recipients-file scripts/email_recipients.txt
+
+    Or with explicit addresses (overrides --recipients-file):
+    python send_report_email.py \
+        --html-file  <path to report.html> \
+        --subject    "TileOPs Nightly Report 20260318_220000" \
+        --to         addr1@example.com addr2@example.com
 
 Environment variables (required):
     MAIL_SMTP_SERVER   — SMTP server (e.g. smtp.163.com)
@@ -24,18 +30,32 @@ from email.mime.text import MIMEText
 from pathlib import Path
 
 
+def load_recipients(filepath: str) -> list[str]:
+    """Load email addresses from a file, one per line. Ignore comments and blanks."""
+    path = Path(filepath)
+    if not path.exists():
+        print(f"::warning::Recipients file not found: {filepath}", file=sys.stderr)
+        return []
+    recipients = []
+    for line in path.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if line and not line.startswith("#"):
+            recipients.append(line)
+    return recipients
+
+
 def send_email(
     smtp_server: str,
     smtp_port: int,
     username: str,
     password: str,
-    to_addr: str,
+    to_addrs: list[str],
     subject: str,
     html_body: str,
 ) -> None:
     msg = MIMEMultipart("alternative")
     msg["From"] = username
-    msg["To"] = to_addr
+    msg["To"] = ", ".join(to_addrs)
     msg["Subject"] = subject
 
     # Plain-text fallback
@@ -49,21 +69,31 @@ def send_email(
         # SSL
         with smtplib.SMTP_SSL(smtp_server, smtp_port, context=context) as server:
             server.login(username, password)
-            server.sendmail(username, to_addr, msg.as_string())
+            server.sendmail(username, to_addrs, msg.as_string())
     else:
         # STARTTLS (port 587, 25, etc.)
         with smtplib.SMTP(smtp_server, smtp_port) as server:
             server.starttls(context=context)
             server.login(username, password)
-            server.sendmail(username, to_addr, msg.as_string())
+            server.sendmail(username, to_addrs, msg.as_string())
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Send nightly HTML report via email")
     parser.add_argument("--html-file", required=True, help="Path to report.html")
     parser.add_argument("--subject", required=True, help="Email subject line")
-    parser.add_argument("--to", required=True, help="Recipient email address")
+    parser.add_argument("--to", nargs="+", default=[], help="Recipient email address(es)")
+    parser.add_argument("--recipients-file", default=None,
+                        help="Path to file with recipient emails (one per line)")
     args = parser.parse_args()
+
+    # Resolve recipients: --to takes priority; fall back to --recipients-file
+    recipients = args.to
+    if not recipients and args.recipients_file:
+        recipients = load_recipients(args.recipients_file)
+    if not recipients:
+        print("::warning::No recipients specified — skipping email.", file=sys.stderr)
+        sys.exit(0)
 
     smtp_server = os.environ.get("MAIL_SMTP_SERVER", "")
     smtp_port   = int(os.environ.get("MAIL_SMTP_PORT", "465"))
@@ -85,11 +115,12 @@ def main() -> None:
         sys.exit(0)
 
     html_body = html_path.read_text(encoding="utf-8")
-    print(f"Sending report email to {args.to} ...")
+    recipient_list = ", ".join(recipients)
+    print(f"Sending report email to {recipient_list} ...")
     try:
         send_email(smtp_server, smtp_port, username, password,
-                   args.to, args.subject, html_body)
-        print(f"Email sent successfully to {args.to}")
+                   recipients, args.subject, html_body)
+        print(f"Email sent successfully to {recipient_list}")
     except Exception as exc:
         print(f"::warning::Failed to send email: {exc}", file=sys.stderr)
         sys.exit(1)
