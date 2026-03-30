@@ -121,10 +121,10 @@ def _ratio_badge(ratio: float | None) -> str:
     if ratio is None:
         return '<span class="badge badge-blue">—</span>'
     if ratio >= 1.0:
-        return f'<span class="badge badge-green">{ratio:.2f}</span>'
+        return f'<span class="badge badge-green">{ratio:.0%}</span>'
     if ratio >= 0.80:
-        return f'<span class="badge badge-yellow">{ratio:.2f}</span>'
-    return f'<span class="badge badge-red">{ratio:.2f}</span>'
+        return f'<span class="badge badge-yellow">{ratio:.0%}</span>'
+    return f'<span class="badge badge-red">{ratio:.0%}</span>'
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -226,7 +226,7 @@ def build_html(args, data: dict, analysis: dict | None) -> str:
         ca = cat_analysis.get(cat_name, {})
 
         parts.append('<div class="cat-card"><div class="cat-bars">')
-        ratio_str = f" (avg ratio: {c['avg_ratio']:.2f})" if c.get("avg_ratio") else ""
+        ratio_str = f" (avg ratio: {c['avg_ratio']:.0%})" if c.get("avg_ratio") else ""
         parts.append(f'<h3 style="margin-bottom:.35rem">{_esc(cat_name)}{_esc(ratio_str)}</h3>')
 
         # Test bar
