@@ -1,12 +1,18 @@
 #!/usr/bin/env python3
-"""analyze_report.py — Call Claude API to analyze nightly TileOPs report.
+"""analyze_report.py — Call Claude API to analyze nightly TileOPs results.
 
-Single-call analysis: reads op_registry.json and calls Claude once to produce
-structured analysis.json with per-category scores and evaluations.
+Reads nightly_data.json (produced by parse_results.py) and calls Claude once
+to produce structured analysis.json with per-category scores and evaluations.
+
+Usage:
+    python scripts/analyze_report.py \
+        --nightly-data  nightly_data.json \
+        --output        analysis.json \
+        [--model        claude-sonnet-4-6]
 
 Environment variables:
-  ANTHROPIC_API_KEY or ANTHROPIC_AUTH_TOKEN  — required
-  ANTHROPIC_BASE_URL                         — optional, for custom proxy
+    ANTHROPIC_API_KEY or ANTHROPIC_AUTH_TOKEN  — required
+    ANTHROPIC_BASE_URL                        — optional
 """
 
 import argparse
@@ -20,126 +26,137 @@ from claude_utils import (
     require_anthropic,
 )
 
-# Category names (must match op_manifest.json)
-_CATEGORIES = [
-    "Elementwise", "Reduce", "Norm", "Conv & Pooling", "GEMM",
-    "Quantize", "Sampling", "Flash Attention", "MoE",
-    "Linear Attention", "SSM",
-]
 
+# ---------------------------------------------------------------------------
+# Format nightly_data for Claude prompt
+# ---------------------------------------------------------------------------
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Data loaders
-# ─────────────────────────────────────────────────────────────────────────────
-
-def _load_progress_detail(registry: dict) -> str:
-    """Format per-category, per-op status from registry for the prompt."""
-    summary = registry.get("summary")
-    ops = registry.get("ops", {})
-    if not summary:
-        return "No progress data available.\n"
+def _format_progress(data: dict) -> str:
+    """Format overall + per-category progress summary."""
+    test = data.get("test", {})
+    bench = data.get("bench", {})
+    cats = data.get("categories", {})
 
     lines = [
-        f"Total ops: {summary['total_ops']} | "
-        f"Implemented: {summary['impl_ops']} | "
-        f"Tested: {summary['tested_ops']} | "
-        f"Benched: {summary.get('benched_ops', 0)} | "
-        f"Done: {summary['done_ops']}",
+        f"Test: {test.get('total_ops', 0)} ops, "
+        f"{test.get('passed_cases', 0)}/{test.get('total_cases', 0)} cases passed, "
+        f"{test.get('failed_cases', 0)} failed, {test.get('skipped_cases', 0)} skipped",
+        f"Bench: {bench.get('total_ops', 0)} ops, {bench.get('total_configs', 0)} configs",
+        f"Baseline alerts (ratio < 0.80): {len(data.get('baseline_alerts', []))}",
+        f"Regressions: {len(data.get('regressions', []))}",
+        f"Improvements: {len(data.get('improvements', []))}",
         "",
     ]
-    for cat in summary.get("categories", []):
-        t = cat["total_ops"]
-        im = cat["impl_ops"]
-        te = cat.get("tested_ops", 0)
-        be = cat.get("benched_ops", 0)
-        d = cat["done_ops"]
-        lines.append(f"### {cat['name']} ({im}/{t} impl, {te}/{t} tested, {be}/{t} benched, {d}/{t} done)")
-        for op in cat.get("ops", []):
-            impl_s = "Y" if op.get("implemented") else "N"
 
-            # Get detailed status from registry ops
-            reg = ops.get(op.get("id", ""), {})
-            ts = reg.get("test_status", {})
-            bs = reg.get("bench_status", {})
+    for cat_name in sorted(cats):
+        c = cats[cat_name]
+        ratio_str = f", avg_ratio={c['avg_ratio']:.2f}" if c.get("avg_ratio") else ""
+        lines.append(
+            f"### {cat_name}: "
+            f"test={c['test_passed']}/{c['test_ops']} passed, {c['test_failed']} failed | "
+            f"bench={c['bench_qualified']} qualified, {c['bench_underperforming']} underperf "
+            f"({c['bench_configs']} configs){ratio_str}"
+        )
 
-            test_s = ts.get("status", "missing")
-            bench_s = bs.get("status", "missing")
-            if bs.get("ratio") is not None:
-                bench_s += f"({bs['ratio']:.2f})"
-
-            lines.append(f"  {op['name']} [{op.get('sub','')}]: impl={impl_s} test={test_s} bench={bench_s}")
-        lines.append("")
     return "\n".join(lines)
 
 
-def _load_test_summary(registry: dict) -> str:
-    """Derive test summary from registry per-op test_status."""
-    ops = registry.get("ops", {})
+def _format_test_details(data: dict) -> str:
+    """Format per-op test details, focusing on failures."""
+    test = data.get("test", {})
+    ops = test.get("ops", {})
     if not ops:
         return "No test data available.\n"
 
-    cat_data: dict[str, dict] = {}
-    total_passed = total_failed = 0
-
-    for op in ops.values():
-        cat_name = op.get("category", "Other")
-        ts = op.get("test_status", {})
-        status = ts.get("status", "missing")
-
-        cd = cat_data.setdefault(cat_name, {"passed": 0, "failed": 0, "missing": 0, "errors": []})
-        if status == "passed":
-            cd["passed"] += 1
-            total_passed += 1
-        elif status == "failed":
-            cd["failed"] += 1
-            total_failed += 1
-            for e in ts.get("errors", [])[:3]:
-                cd["errors"].append(f"{op.get('name', '?')}: {e[:200]}")
-        else:
-            cd["missing"] += 1
-
-    lines = [f"Total ops: {total_passed} passed, {total_failed} failed", ""]
-    for cn in sorted(cat_data.keys()):
-        cd = cat_data[cn]
-        lines.append(f"### {cn}: {cd['passed']} passed, {cd['failed']} failed, {cd['missing']} missing")
-        for e in cd["errors"][:5]:
-            lines.append(f"  - {e}")
+    lines = []
+    # Failed ops first
+    failed_ops = {k: v for k, v in ops.items() if v["failed"] > 0}
+    if failed_ops:
+        lines.append(f"### Failed ops ({len(failed_ops)}):")
+        for name in sorted(failed_ops):
+            op = failed_ops[name]
+            total = op["passed"] + op["failed"] + op["skipped"]
+            err_str = f", max_err={op['max_abs_err']:.2e}" if op.get("max_abs_err") else ""
+            lines.append(f"  {name} [{op['category']}]: {op['failed']}/{total} failed{err_str}")
+            for ft in op["failing_tests"][:3]:
+                lines.append(f"    - {ft['name']}: {ft['message'][:100]}")
         lines.append("")
+
+    # Summary of passing ops
+    passed_ops = [k for k, v in ops.items() if v["failed"] == 0 and v["passed"] > 0]
+    lines.append(f"### Passing ops ({len(passed_ops)}): {', '.join(sorted(passed_ops)[:20])}")
+    if len(passed_ops) > 20:
+        lines.append(f"  ... and {len(passed_ops) - 20} more")
+
     return "\n".join(lines)
 
 
-def _load_bench_log(registry: dict) -> str:
-    """Derive bench summary from registry per-op bench_status."""
-    ops = registry.get("ops", {})
+def _format_bench_details(data: dict) -> str:
+    """Format benchmark details + alerts + regressions."""
+    bench = data.get("bench", {})
+    ops = bench.get("ops", {})
     if not ops:
         return "No benchmark data available.\n"
 
-    cat_data: dict[str, dict] = {}
-
-    for op in ops.values():
-        cat_name = op.get("category", "Other")
-        bs = op.get("bench_status", {})
-        status = bs.get("status", "missing")
-        ratio = bs.get("ratio")
-
-        cd = cat_data.setdefault(cat_name, {"qualified": 0, "underperforming": 0, "failed": 0, "missing": 0, "ratios": []})
-        cd[status] = cd.get(status, 0) + 1
-        if ratio is not None:
-            cd["ratios"].append((op.get("name", "?"), ratio))
-
     lines = []
-    for cn in sorted(cat_data.keys()):
-        cd = cat_data[cn]
-        lines.append(f"### {cn}: {cd['qualified']} qualified, {cd['underperforming']} underperforming, {cd['failed']} failed, {cd['missing']} missing")
-        for name, r in cd["ratios"]:
-            lines.append(f"  {name}: ratio={r:.2f}")
+
+    # Per-op summary with worst ratios
+    lines.append("### Per-op benchmark summary:")
+    for name in sorted(ops):
+        op = ops[name]
+        ratios = [c.get("baseline_ratio") for c in op["configs"] if c.get("baseline_ratio")]
+        if ratios:
+            avg = sum(ratios) / len(ratios)
+            worst = min(ratios)
+            lines.append(f"  {name} [{op['category']}]: {len(op['configs'])} configs, "
+                         f"avg_ratio={avg:.2f}, worst={worst:.2f}")
+        else:
+            lines.append(f"  {name} [{op['category']}]: {len(op['configs'])} configs, no ratio data")
+    lines.append("")
+
+    # Baseline alerts
+    alerts = data.get("baseline_alerts", [])
+    if alerts:
+        lines.append(f"### Baseline alerts ({len(alerts)} configs below 0.80 ratio):")
+        for a in alerts[:15]:
+            lines.append(f"  {a['op']} | {a['config']} | ratio={a['ratio']:.2f} "
+                         f"| tileops={a.get('tileops_ms', '?')}ms "
+                         f"| baseline={a.get('baseline_ms', '?')}ms ({a['baseline_tag']})")
+        if len(alerts) > 15:
+            lines.append(f"  ... and {len(alerts) - 15} more")
         lines.append("")
-    return "\n".join(lines) if lines else "No benchmark data available.\n"
+
+    # Regressions
+    regs = data.get("regressions", [])
+    if regs:
+        lines.append(f"### Regressions ({len(regs)} vs 14-day best):")
+        for r in regs[:10]:
+            lines.append(f"  {r['op']} | {r['config']} | +{r['delta_pct']:.1f}% "
+                         f"({r['best_ms']}ms → {r['curr_ms']}ms)")
+        lines.append("")
+
+    # Improvements
+    imps = data.get("improvements", [])
+    if imps:
+        lines.append(f"### Improvements ({len(imps)} vs 14-day best):")
+        for i in imps[:10]:
+            lines.append(f"  {i['op']} | {i['config']} | {i['delta_pct']:.1f}% "
+                         f"({i['best_ms']}ms → {i['curr_ms']}ms)")
+        lines.append("")
+
+    # Bench failures
+    failures = bench.get("failures", [])
+    if failures:
+        lines.append(f"### Bench failures ({len(failures)}):")
+        for f in failures[:10]:
+            lines.append(f"  {f.get('op', '?')} | {f['name']}: {f['message'][:100]}")
+
+    return "\n".join(lines)
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Prompt + System
-# ─────────────────────────────────────────────────────────────────────────────
+# ---------------------------------------------------------------------------
+# Prompt
+# ---------------------------------------------------------------------------
 
 SYSTEM_PROMPT = (
     "You are a senior CI/DevOps engineer analyzing nightly test results for TileOPs, "
@@ -148,44 +165,37 @@ SYSTEM_PROMPT = (
     "no text outside the JSON. The JSON must match the exact schema specified."
 )
 
-_CATEGORY_JSON_TEMPLATE = ",\n".join(
-    f'    "{c}": {{"perf_score": <1-5 or null>, "func_score": <1-5 or null>, '
-    f'"test_summary": {{"passed": N, "failed": N, "missing": N}}, '
-    f'"bench_summary": {{"qualified": N, "underperforming": N, "failed": N, "missing": N}}, '
-    f'"issues": "<text>", "evaluation": "<text>"}}'
-    for c in _CATEGORIES
-)
 
+def build_prompt(progress_text: str, test_text: str, bench_text: str,
+                 categories: list[str]) -> str:
+    cat_list = ", ".join(categories)
 
-def build_prompt(progress_text: str, test_text: str, bench_text: str) -> str:
-    cat_list = ", ".join(_CATEGORIES)
+    cat_json = ",\n".join(
+        f'    "{c}": {{"perf_score": <1-5 or null>, "func_score": <1-5 or null>, '
+        f'"issues": "<text>", "evaluation": "<text>"}}'
+        for c in categories
+    )
+
     return f"""Analyze the nightly results for TileOPs.
 
-## Operator Categories
+## Discovered Categories
 {cat_list}
 
 ## Status Definitions
 
-Each operator has a **test status** and a **bench status**:
+**Test results**: per-testcase pass/fail/skip, aggregated per op (by class name).
+**Benchmark results**: per-config latency, TFLOPS, baseline_ratio (= baseline_latency / tileops_latency).
+  - ratio >= 1.0 means TileOPs is faster than baseline
+  - ratio >= 0.80 is "qualified" (acceptable)
+  - ratio < 0.80 is "underperforming" (needs optimization)
 
-**Test status** (3 levels):
-- `passed`  — all mapped test functions pass
-- `failed`  — mapped tests exist but some fail, or test results not found in XML
-- `missing` — no test mapping exists for this operator
-
-**Bench status** (4 levels, threshold: ratio >= 0.80 = qualified):
-- `qualified(ratio)`       — benchmark exists and performance >= 80% of baseline
-- `underperforming(ratio)` — benchmark exists but performance < 80% of baseline
-- `failed`                 — benchmark mapping exists but no results in log
-- `missing`                — no benchmark mapping exists for this operator
-
-## Implementation Progress
+## Overall Progress
 {progress_text}
 
 ## Test Results
 {test_text}
 
-## Benchmark Log
+## Benchmark Results
 {bench_text}
 
 ## Instructions
@@ -208,26 +218,20 @@ Score each category on TWO dimensions:
 - 5 = All or nearly all tests pass
 - null = no test data for this category
 
-For each category, also count the operators in each status:
-- "test_summary":  {{"passed": N, "failed": N, "missing": N}}
-- "bench_summary": {{"qualified": N, "underperforming": N, "failed": N, "missing": N}}
-
 For each category, provide:
 - "perf_score": performance score 1-5 or null
 - "func_score": functional score 1-5 or null
-- "test_summary": count of operators in each test status
-- "bench_summary": count of operators in each bench status
 - "issues": concise description of problems (empty string if none)
-- "evaluation": brief assessment of current status and 1-2 actionable recommendations
+- "evaluation": brief assessment and 1-2 actionable recommendations
 
-For the overall project, provide:
+For the overall project:
 - "summary": 2-3 sentence project health assessment
 - "recommendations": list of 3 top actionable items
 
-Respond with ONLY this JSON (no other text):
+Respond with ONLY this JSON:
 {{
   "categories": {{
-{_CATEGORY_JSON_TEMPLATE}
+{cat_json}
   }},
   "overall": {{
     "summary": "<text>",
@@ -236,46 +240,41 @@ Respond with ONLY this JSON (no other text):
 }}"""
 
 
-# ─────────────────────────────────────────────────────────────────────────────
+# ---------------------------------------------------------------------------
 # Main
-# ─────────────────────────────────────────────────────────────────────────────
+# ---------------------------------------------------------------------------
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="Call Claude API to analyze nightly TileOPs report, output analysis.json"
-    )
-    parser.add_argument("--registry", required=True, help="Path to op_registry.json")
-    parser.add_argument("--output",   required=True, help="Output path for analysis.json")
-    parser.add_argument(
-        "--model",
-        default="claude-sonnet-4-6",
-        help="Claude model ID (default: claude-sonnet-4-6)",
-    )
+        description="Call Claude API to analyze nightly TileOPs report")
+    parser.add_argument("--nightly-data", required=True, help="Path to nightly_data.json")
+    parser.add_argument("--output", required=True, help="Output path for analysis.json")
+    parser.add_argument("--model", default="claude-sonnet-4-6",
+                        help="Claude model ID (default: claude-sonnet-4-6)")
     args = parser.parse_args()
 
     api_key, base_url = get_api_config()
-
     if not api_key:
-        print(
-            "::warning::ANTHROPIC_API_KEY / ANTHROPIC_AUTH_TOKEN not set — "
-            "skipping Claude analysis.",
-            file=sys.stderr,
-        )
+        print("::warning::ANTHROPIC_API_KEY / ANTHROPIC_AUTH_TOKEN not set — "
+              "skipping Claude analysis.", file=sys.stderr)
         sys.exit(0)
 
     if require_anthropic() is None:
         sys.exit(0)
 
-    # Load registry
-    registry = json.loads(Path(args.registry).read_text())
+    data = json.loads(Path(args.nightly_data).read_text())
+    categories = sorted(data.get("categories", {}).keys())
 
-    # Derive all text from registry
-    progress_text = _load_progress_detail(registry)
-    test_text = _load_test_summary(registry)
-    bench_text = _load_bench_log(registry)
+    if not categories:
+        print("::warning::No categories found in nightly data — skipping analysis.",
+              file=sys.stderr)
+        sys.exit(0)
 
-    # Single Claude call → structured JSON
-    prompt = build_prompt(progress_text, test_text, bench_text)
+    progress_text = _format_progress(data)
+    test_text = _format_test_details(data)
+    bench_text = _format_bench_details(data)
+
+    prompt = build_prompt(progress_text, test_text, bench_text, categories)
     print("Calling Claude for structured analysis ...")
 
     try:
@@ -287,9 +286,11 @@ def main() -> None:
         )
     except Exception as exc:
         print(f"::warning::Claude analysis failed: {exc}", file=sys.stderr)
-        # Fallback: empty structure
         analysis = {
-            "categories": {c: {"perf_score": None, "func_score": None, "issues": "", "evaluation": ""} for c in _CATEGORIES},
+            "categories": {
+                c: {"perf_score": None, "func_score": None, "issues": "", "evaluation": ""}
+                for c in categories
+            },
             "overall": {"summary": "Analysis unavailable.", "recommendations": []},
         }
 

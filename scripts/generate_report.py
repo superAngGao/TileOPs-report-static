@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
-"""generate_report.py — Generate self-contained HTML report from op_registry.json + analysis.json.
+"""generate_report.py — Generate self-contained HTML report from nightly_data.json + analysis.json.
 
 Usage:
-    python generate_report.py \
-        --date          20260318_220000 \
-        --commit        abc123 \
-        --report-dir    _gh_pages/nightly/20260318_220000 \
-        --html-output   report.html \
-        --registry      op_registry.json \
-        --analysis-json analysis.json
+    python scripts/generate_report.py \
+        --date           20260330_220000 \
+        --commit         abc123 \
+        --report-dir     _gh_pages/nightly/20260330_220000 \
+        --html-output    report.html \
+        --nightly-data   nightly_data.json \
+        --analysis-json  analysis.json
 """
 
 import argparse
@@ -36,7 +36,7 @@ h2{font-size:1.15rem;font-weight:600;margin:1.5rem 0 .75rem;border-bottom:2px so
 h3{font-size:.95rem;font-weight:600;margin:.75rem 0 .25rem}
 .meta{color:var(--muted);font-size:.82rem;margin-bottom:1.5rem}
 .card{background:var(--card);border:1px solid var(--border);border-radius:.5rem;padding:1rem 1.25rem;margin-bottom:1rem}
-/* Overall progress */
+/* Overall grid */
 .overall-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:.5rem;margin:.75rem 0}
 .stat-box{background:var(--card);border:1px solid var(--border);border-radius:.375rem;padding:.6rem;text-align:center}
 .stat-box .num{font-size:1.4rem;font-weight:700;line-height:1}
@@ -44,10 +44,9 @@ h3{font-size:.95rem;font-weight:600;margin:.75rem 0 .25rem}
 /* Progress bars */
 .bar-wrap{background:#e5e7eb;border-radius:9999px;height:.75rem;overflow:hidden;margin:.25rem 0;box-shadow:inset 0 1px 2px rgba(0,0,0,.08)}
 .bar-fill{height:100%;border-radius:9999px;transition:width .6s ease;min-width:2px}
-.bar-impl{background:linear-gradient(90deg,#60a5fa,#3b82f6)}
 .bar-test{background:linear-gradient(90deg,#4ade80,#22c55e)}
 .bar-bench{background:linear-gradient(90deg,#a78bfa,#8b5cf6)}
-/* Stacked bar segments */
+/* Stacked bars */
 .stacked-bar{display:flex;height:100%;border-radius:9999px;overflow:hidden}
 .stacked-bar .seg{height:100%;transition:width .6s ease}
 .stacked-bar .seg:first-child{border-radius:9999px 0 0 9999px}
@@ -58,7 +57,7 @@ h3{font-size:.95rem;font-weight:600;margin:.75rem 0 .25rem}
 .bar-row{display:flex;align-items:center;gap:.5rem;font-size:.82rem;margin:.2rem 0}
 .bar-label{width:50px;color:var(--muted);flex-shrink:0;font-weight:500}
 .bar-container{flex:1;min-width:60px}
-.bar-count{width:120px;text-align:right;color:var(--muted);flex-shrink:0;font-size:.75rem}
+.bar-count{width:140px;text-align:right;color:var(--muted);flex-shrink:0;font-size:.75rem}
 /* Category card */
 .cat-card{display:grid;grid-template-columns:1fr auto;gap:.75rem;padding:.75rem 0;border-bottom:1px solid var(--border)}
 .cat-card:last-child{border-bottom:none}
@@ -69,54 +68,39 @@ h3{font-size:.95rem;font-weight:600;margin:.75rem 0 .25rem}
 .score-badge .val{font-size:1.1rem;line-height:1}
 .score-perf{background:#ede9fe;color:#5b21b6}.score-func{background:#dcfce7;color:#166534}
 .score-null{background:#f3f4f6;color:#9ca3af}
+/* Tables */
+.data-table{width:100%;border-collapse:collapse;font-size:.82rem;margin:.5rem 0}
+.data-table th{text-align:left;padding:.4rem .5rem;background:#f9fafb;border-bottom:2px solid var(--border);font-weight:600;font-size:.75rem;color:var(--muted)}
+.data-table td{padding:.35rem .5rem;border-bottom:1px solid var(--border);vertical-align:middle}
+.data-table tr:hover{background:#f0f9ff}
+.badge{display:inline-block;padding:.1rem .4rem;border-radius:.25rem;font-size:.72rem;font-weight:600}
+.badge-red{background:#fee2e2;color:#991b1b}.badge-yellow{background:#fef3c7;color:#92400e}
+.badge-green{background:#dcfce7;color:#166534}.badge-blue{background:#dbeafe;color:#1e40af}
 /* Detail section */
 .detail-item{margin:.75rem 0;padding:.75rem;background:#fafafa;border-radius:.375rem;border:1px solid var(--border)}
 .detail-item h3{margin:0 0 .35rem;font-size:.88rem}
 .detail-issues{color:var(--red);font-size:.85rem;margin:.25rem 0}
 .detail-eval{font-size:.85rem;color:var(--text);margin:.25rem 0}
-/* Overall assessment */
+/* Assessment */
 .rec-list{margin:.5rem 0;padding-left:1.25rem}
 .rec-list li{margin:.25rem 0;font-size:.88rem}
 /* Mobile */
 @media(max-width:600px){
-  body{padding:.75rem}
-  .card{padding:.75rem}
-  h1{font-size:1.25rem}
+  body{padding:.75rem}.card{padding:.75rem}h1{font-size:1.25rem}
   .overall-grid{grid-template-columns:repeat(3,1fr);gap:.4rem}
   .stat-box .num{font-size:1.1rem}
-  .bar-wrap{height:1rem}
-  .bar-row{gap:.35rem;font-size:.8rem;margin:.3rem 0}
-  .bar-label{width:42px;font-size:.75rem}
-  .bar-count{width:105px;font-size:.68rem}
   .cat-card{grid-template-columns:1fr;gap:.5rem}
   .cat-scores{justify-content:flex-start}
-  .score-badge{padding:.2rem .4rem}
-  .score-badge .val{font-size:1rem}
-  .detail-issues,.detail-eval{font-size:.82rem}
+  .data-table{font-size:.75rem}
 }
 """
 
 
 # ──────────────────────────────────────────────────────────────────────────────
-# HTML builders
+# HTML helpers
 # ──────────────────────────────────────────────────────────────────────────────
 
-def _bar_html(pct: float, css_class: str) -> str:
-    return (
-        f'<div class="bar-wrap">'
-        f'<div class="bar-fill {css_class}" style="width:{pct:.1f}%"></div>'
-        f'</div>'
-    )
-
-
-def _score_badge(value, label: str, css_class: str) -> str:
-    if value is None:
-        return f'<div class="score-badge score-null"><span class="val">—</span>{label}</div>'
-    return f'<div class="score-badge {css_class}"><span class="val">{value}</span>{label}</div>'
-
-
 def _stacked_bar(segments: list[tuple[float, str]], total: int) -> str:
-    """Render a stacked progress bar. segments: [(count, css_class), ...]."""
     if total == 0:
         return '<div class="bar-wrap"><div class="stacked-bar"></div></div>'
     inner = ""
@@ -127,33 +111,38 @@ def _stacked_bar(segments: list[tuple[float, str]], total: int) -> str:
     return f'<div class="bar-wrap"><div class="stacked-bar">{inner}</div></div>'
 
 
-def _count_status(registry_ops: dict, cat_name: str) -> dict:
-    """Count test/bench status for ops in a given category from registry."""
-    test_counts = {"passed": 0, "failed": 0, "missing": 0}
-    bench_counts = {"qualified": 0, "passed": 0, "underperforming": 0, "failed": 0, "missing": 0}
-    for op in registry_ops.values():
-        if op.get("category") != cat_name:
-            continue
-        ts = op.get("test_status", {}).get("status", "missing")
-        if ts in test_counts:
-            test_counts[ts] += 1
-        else:
-            test_counts["missing"] += 1
-        bs = op.get("bench_status", {}).get("status", "missing")
-        if bs in bench_counts:
-            bench_counts[bs] += 1
-        else:
-            bench_counts["missing"] += 1
-    return {"test": test_counts, "bench": bench_counts}
+def _score_badge(value, label: str, css_class: str) -> str:
+    if value is None:
+        return f'<div class="score-badge score-null"><span class="val">—</span>{label}</div>'
+    return f'<div class="score-badge {css_class}"><span class="val">{value}</span>{label}</div>'
 
 
-def build_html(args, prog: dict | None, analysis: dict | None, registry_ops: dict | None = None) -> str:
+def _ratio_badge(ratio: float | None) -> str:
+    if ratio is None:
+        return '<span class="badge badge-blue">—</span>'
+    if ratio >= 1.0:
+        return f'<span class="badge badge-green">{ratio:.2f}</span>'
+    if ratio >= 0.80:
+        return f'<span class="badge badge-yellow">{ratio:.2f}</span>'
+    return f'<span class="badge badge-red">{ratio:.2f}</span>'
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# HTML builder
+# ──────────────────────────────────────────────────────────────────────────────
+
+def build_html(args, data: dict, analysis: dict | None) -> str:
     date_str = args.date
-    commit   = args.commit
+    commit = args.commit
     gen_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
     if analysis is None:
-        analysis = {"categories": {}, "overall": {"summary": "No analysis available.", "recommendations": []}}
+        analysis = {"categories": {}, "overall": {
+            "summary": "No analysis available.", "recommendations": []}}
+
+    test = data.get("test", {})
+    bench = data.get("bench", {})
+    categories = data.get("categories", {})
 
     parts = [
         "<!DOCTYPE html><html lang='zh-CN'><head>",
@@ -164,7 +153,7 @@ def build_html(args, prog: dict | None, analysis: dict | None, registry_ops: dic
         "</head><body>",
     ]
 
-    # ── Section 1: Header ────────────────────────────────────────────────────
+    # ── Header ────────────────────────────────────────────────────────────
     parts += [
         "<h1>TileOPs Nightly Report</h1>",
         f"<p class='meta'>Date: {_esc(date_str)} &nbsp;|&nbsp; "
@@ -172,199 +161,227 @@ def build_html(args, prog: dict | None, analysis: dict | None, registry_ops: dic
         f"Generated: {gen_time}</p>",
     ]
 
-    # ── Section 2: Overall progress ──────────────────────────────────────────
-    if prog:
-        total   = prog["total_ops"]
-        impl    = prog["impl_ops"]
-        tested  = prog["tested_ops"]
-        benched = prog.get("benched_ops", 0)
-        done    = prog["done_ops"]
-        pct     = done / total * 100 if total else 0
+    # ── Overall Summary ───────────────────────────────────────────────────
+    t_ops = test.get("total_ops", 0)
+    t_cases = test.get("total_cases", 0)
+    t_passed = test.get("passed_cases", 0)
+    t_failed = test.get("failed_cases", 0)
+    b_ops = bench.get("total_ops", 0)
+    b_configs = bench.get("total_configs", 0)
+    n_alerts = len(data.get("baseline_alerts", []))
+    n_regs = len(data.get("regressions", []))
+    n_imps = len(data.get("improvements", []))
 
-        # Aggregate test/bench status counts from registry
-        all_test = {"passed": 0, "failed": 0, "missing": 0}
-        all_bench = {"qualified": 0, "passed": 0, "underperforming": 0, "failed": 0, "missing": 0}
-        if registry_ops:
-            for op in registry_ops.values():
-                ts = op.get("test_status", {}).get("status", "missing")
-                all_test[ts] = all_test.get(ts, 0) + 1
-                bs = op.get("bench_status", {}).get("status", "missing")
-                all_bench[bs] = all_bench.get(bs, 0) + 1
+    health = "pass" if t_failed == 0 and n_regs == 0 and not bench.get("failures") else "warn"
 
-        parts += [
-            "<div class='card'>",
-            "<h2 style='margin-top:0'>Overall Progress</h2>",
-            "<div class='overall-grid'>",
-            f"<div class='stat-box'><div class='num'>{total}</div><div class='lbl'>Total Ops</div></div>",
-            f"<div class='stat-box'><div class='num' style='color:var(--blue)'>{impl}</div><div class='lbl'>Implemented</div></div>",
-            f"<div class='stat-box'><div class='num' style='color:var(--green)'>{tested}</div><div class='lbl'>Tests Pass</div></div>",
-            f"<div class='stat-box'><div class='num' style='color:var(--purple)'>{benched}</div><div class='lbl'>Bench Pass</div></div>",
-            f"<div class='stat-box'><div class='num' style='font-size:1.1rem'>{done}/{total}</div><div class='lbl'>Done ({pct:.0f}%)</div></div>",
-            "</div>",
-            # Overall 3-bar: Impl is simple, Test/Bench are stacked
-            "<div style='margin-top:.5rem'>",
-        ]
-        impl_pct = impl / total * 100 if total else 0
+    parts += [
+        "<div class='card'>",
+        "<h2 style='margin-top:0'>Overall Summary</h2>",
+        "<div class='overall-grid'>",
+        f"<div class='stat-box'><div class='num'>{t_ops}</div><div class='lbl'>Test Ops</div></div>",
+        f"<div class='stat-box'><div class='num' style='color:var(--green)'>{t_passed}/{t_cases}</div><div class='lbl'>Cases Pass</div></div>",
+        f"<div class='stat-box'><div class='num' style='color:var(--purple)'>{b_ops}</div><div class='lbl'>Bench Ops</div></div>",
+        f"<div class='stat-box'><div class='num'>{b_configs}</div><div class='lbl'>Bench Configs</div></div>",
+        f"<div class='stat-box'><div class='num' style='color:var(--{'red' if n_alerts else 'green'})'>{n_alerts}</div><div class='lbl'>Alerts</div></div>",
+        f"<div class='stat-box'><div class='num'>{len(categories)}</div><div class='lbl'>Categories</div></div>",
+        "</div>",
+    ]
+
+    # Test bar: passed/failed/skipped
+    if t_cases > 0:
+        test_bar = _stacked_bar([
+            (t_passed, "seg-passed"),
+            (t_failed, "seg-failed"),
+        ], t_cases)
         parts.append(
-            f'<div class="bar-row"><span class="bar-label">Impl</span>'
-            f'<div class="bar-container">{_bar_html(impl_pct, "bar-impl")}</div>'
-            f'<span class="bar-count">{impl}/{total}</span></div>'
+            f'<div class="bar-row"><span class="bar-label">Test</span>'
+            f'<div class="bar-container">{test_bar}</div>'
+            f'<span class="bar-count">{t_passed}✓ {t_failed}✗ {test.get("skipped_cases", 0)}—</span></div>'
         )
-        if registry_ops:
-            # Test stacked bar: passed(green) + failed(red), rest is gray background
-            test_bar = _stacked_bar([
-                (all_test["passed"], "seg-passed"),
-                (all_test["failed"], "seg-failed"),
-            ], total)
-            test_label = f'{all_test["passed"]}✓ {all_test["failed"]}✗ {all_test["missing"]}—'
-            parts.append(
-                f'<div class="bar-row"><span class="bar-label">Test</span>'
-                f'<div class="bar-container">{test_bar}</div>'
-                f'<span class="bar-count">{test_label}</span></div>'
-            )
-            # Bench stacked bar: qualified+passed(purple) + underperforming(yellow) + failed(red)
-            bench_ok = all_bench["qualified"] + all_bench["passed"]
-            bench_bar = _stacked_bar([
-                (bench_ok, "seg-qualified"),
-                (all_bench["underperforming"], "seg-underperforming"),
-                (all_bench["failed"], "seg-failed"),
-            ], total)
-            bench_label = f'{bench_ok}✓ {all_bench["underperforming"]}△ {all_bench["failed"]}✗ {all_bench["missing"]}—'
-            parts.append(
-                f'<div class="bar-row"><span class="bar-label">Bench</span>'
-                f'<div class="bar-container">{bench_bar}</div>'
-                f'<span class="bar-count">{bench_label}</span></div>'
-            )
-        else:
-            # Fallback: simple bars when registry not available
-            test_pct = tested / total * 100 if total else 0
-            bench_pct = benched / total * 100 if total else 0
-            for label, p, cls, count in [
-                ("Test",  test_pct,  "bar-test",  f"{tested}/{total}"),
-                ("Bench", bench_pct, "bar-bench", f"{benched}/{total}"),
-            ]:
-                parts.append(
-                    f'<div class="bar-row"><span class="bar-label">{label}</span>'
-                    f'<div class="bar-container">{_bar_html(p, cls)}</div>'
-                    f'<span class="bar-count">{count}</span></div>'
-                )
-        parts += ["</div>", "</div>"]
 
-    # ── Section 3: Per-category progress + scores ────────────────────────────
+    # Bench bar: qualified/underperforming
+    total_q = sum(c.get("bench_qualified", 0) for c in categories.values())
+    total_u = sum(c.get("bench_underperforming", 0) for c in categories.values())
+    total_bf = len(bench.get("failures", []))
+    if b_configs > 0 or total_bf > 0:
+        bench_bar = _stacked_bar([
+            (total_q, "seg-qualified"),
+            (total_u, "seg-underperforming"),
+            (total_bf, "seg-failed"),
+        ], total_q + total_u + total_bf)
+        parts.append(
+            f'<div class="bar-row"><span class="bar-label">Bench</span>'
+            f'<div class="bar-container">{bench_bar}</div>'
+            f'<span class="bar-count">{total_q}✓ {total_u}△ {total_bf}✗</span></div>'
+        )
+
+    parts.append("</div>")  # card
+
+    # ── Category Progress ─────────────────────────────────────────────────
     parts += ["<div class='card'>", "<h2 style='margin-top:0'>Category Progress</h2>"]
 
-    categories = prog.get("categories", []) if prog else []
     cat_analysis = analysis.get("categories", {})
+    for cat_name in sorted(categories):
+        c = categories[cat_name]
+        ca = cat_analysis.get(cat_name, {})
 
-    for cat in categories:
-        name  = cat["name"]
-        t     = cat["total_ops"]
-        im    = cat["impl_ops"]
-        ca    = cat_analysis.get(name, {})
-        ps    = ca.get("perf_score")
-        fs    = ca.get("func_score")
+        parts.append('<div class="cat-card"><div class="cat-bars">')
+        ratio_str = f" (avg ratio: {c['avg_ratio']:.2f})" if c.get("avg_ratio") else ""
+        parts.append(f'<h3 style="margin-bottom:.35rem">{_esc(cat_name)}{_esc(ratio_str)}</h3>')
 
-        impl_pct = im / t * 100 if t else 0
-
-        # Get per-category status counts from registry
-        cat_status = _count_status(registry_ops, name) if registry_ops else None
-
-        parts.append('<div class="cat-card">')
-        parts.append('<div class="cat-bars">')
-        parts.append(f'<h3 style="margin-bottom:.35rem">{_esc(name)}</h3>')
-
-        # Impl bar (always simple)
-        parts.append(
-            f'<div class="bar-row"><span class="bar-label">Impl</span>'
-            f'<div class="bar-container">{_bar_html(impl_pct, "bar-impl")}</div>'
-            f'<span class="bar-count">{im}/{t}</span></div>'
-        )
-
-        if cat_status:
-            tc = cat_status["test"]
+        # Test bar
+        t_total = c["test_ops"]
+        if t_total > 0:
             test_bar = _stacked_bar([
-                (tc["passed"], "seg-passed"),
-                (tc["failed"], "seg-failed"),
-            ], t)
+                (c["test_passed"], "seg-passed"),
+                (c["test_failed"], "seg-failed"),
+            ], t_total)
             parts.append(
                 f'<div class="bar-row"><span class="bar-label">Test</span>'
                 f'<div class="bar-container">{test_bar}</div>'
-                f'<span class="bar-count">{tc["passed"]}✓ {tc["failed"]}✗ {tc["missing"]}—</span></div>'
+                f'<span class="bar-count">{c["test_passed"]}✓ {c["test_failed"]}✗ / {t_total} ops</span></div>'
             )
-            bc = cat_status["bench"]
-            bc_ok = bc["qualified"] + bc["passed"]
+
+        # Bench bar
+        b_total = c["bench_configs"]
+        if b_total > 0:
             bench_bar = _stacked_bar([
-                (bc_ok, "seg-qualified"),
-                (bc["underperforming"], "seg-underperforming"),
-                (bc["failed"], "seg-failed"),
-            ], t)
+                (c["bench_qualified"], "seg-qualified"),
+                (c["bench_underperforming"], "seg-underperforming"),
+            ], b_total)
             parts.append(
                 f'<div class="bar-row"><span class="bar-label">Bench</span>'
                 f'<div class="bar-container">{bench_bar}</div>'
-                f'<span class="bar-count">{bc_ok}✓ {bc["underperforming"]}△ {bc["failed"]}✗ {bc["missing"]}—</span></div>'
+                f'<span class="bar-count">{c["bench_qualified"]}✓ {c["bench_underperforming"]}△ / {b_total} cfgs</span></div>'
             )
-        else:
-            te = cat.get("tested_ops", 0)
-            be = cat.get("benched_ops", 0)
-            test_pct  = te / t * 100 if t else 0
-            bench_pct = be / t * 100 if t else 0
-            for label, p, cls, count in [
-                ("Test",  test_pct,  "bar-test",  f"{te}/{t}"),
-                ("Bench", bench_pct, "bar-bench", f"{be}/{t}"),
-            ]:
-                parts.append(
-                    f'<div class="bar-row"><span class="bar-label">{label}</span>'
-                    f'<div class="bar-container">{_bar_html(p, cls)}</div>'
-                    f'<span class="bar-count">{count}</span></div>'
-                )
-        parts.append('</div>')  # cat-bars
-        parts.append('<div class="cat-scores">')
-        parts.append(_score_badge(ps, "Perf", "score-perf"))
-        parts.append(_score_badge(fs, "Func", "score-func"))
-        parts.append('</div>')  # cat-scores
-        parts.append('</div>')  # cat-card
+
+        parts.append('</div><div class="cat-scores">')
+        parts.append(_score_badge(ca.get("perf_score"), "Perf", "score-perf"))
+        parts.append(_score_badge(ca.get("func_score"), "Func", "score-func"))
+        parts.append('</div></div>')  # cat-scores, cat-card
 
     parts.append("</div>")  # card
 
-    # ── Section 4: Per-category issues & evaluation ──────────────────────────
-    parts += ["<div class='card'>", "<h2 style='margin-top:0'>Category Analysis</h2>"]
+    # ── Test Failures ─────────────────────────────────────────────────────
+    failed_ops = {k: v for k, v in test.get("ops", {}).items() if v.get("failed", 0) > 0}
+    if failed_ops:
+        parts += ["<div class='card'>", f"<h2 style='margin-top:0'>Test Failures ({len(failed_ops)} ops)</h2>"]
+        parts.append('<table class="data-table"><thead><tr>')
+        parts.append('<th>Op</th><th>Category</th><th>Pass/Fail/Skip</th><th>Max Err</th><th>Failing Tests</th>')
+        parts.append('</tr></thead><tbody>')
+        for name in sorted(failed_ops):
+            op = failed_ops[name]
+            err_str = f"{op['max_abs_err']:.2e}" if op.get("max_abs_err") else "—"
+            tests_str = ", ".join(t["name"] for t in op["failing_tests"][:3])
+            if len(op["failing_tests"]) > 3:
+                tests_str += f" (+{len(op['failing_tests']) - 3})"
+            parts.append(
+                f'<tr><td><strong>{_esc(name)}</strong></td>'
+                f'<td>{_esc(op.get("category", ""))}</td>'
+                f'<td>{op["passed"]}/{op["failed"]}/{op["skipped"]}</td>'
+                f'<td>{err_str}</td>'
+                f'<td style="font-size:.75rem">{_esc(tests_str)}</td></tr>'
+            )
+        parts.append('</tbody></table></div>')
 
-    for cat in categories:
-        name = cat["name"]
-        ca   = cat_analysis.get(name, {})
-        issues = ca.get("issues", "")
-        evaluation = ca.get("evaluation", "")
+    # ── Benchmark Failures ────────────────────────────────────────────────
+    bench_failures = bench.get("failures", [])
+    if bench_failures:
+        parts += ["<div class='card'>", f"<h2 style='margin-top:0'>Benchmark Failures ({len(bench_failures)})</h2>"]
+        parts.append('<table class="data-table"><thead><tr><th>Test</th><th>Error</th></tr></thead><tbody>')
+        for f in bench_failures:
+            msg = _esc(f.get("message", "")[:120])
+            parts.append(f'<tr><td>{_esc(f["name"])}</td><td style="font-size:.75rem">{msg}</td></tr>')
+        parts.append('</tbody></table></div>')
 
-        if not issues and not evaluation:
-            continue
+    # ── Baseline Alerts ───────────────────────────────────────────────────
+    alerts = data.get("baseline_alerts", [])
+    if alerts:
+        parts += ["<div class='card'>", f"<h2 style='margin-top:0'>Baseline Alerts ({len(alerts)} configs &lt; 80%)</h2>"]
+        parts.append('<table class="data-table"><thead><tr>')
+        parts.append('<th>Op</th><th>Config</th><th>TileOPs (ms)</th><th>Baseline (ms)</th><th>Ratio</th><th>Via</th>')
+        parts.append('</tr></thead><tbody>')
+        for a in alerts[:50]:
+            parts.append(
+                f'<tr><td><strong>{_esc(a["op"])}</strong></td>'
+                f'<td style="font-size:.75rem">{_esc(a["config"])}</td>'
+                f'<td>{a.get("tileops_ms", 0):.4f}</td>'
+                f'<td>{a.get("baseline_ms", 0):.4f}</td>'
+                f'<td>{_ratio_badge(a.get("ratio"))}</td>'
+                f'<td>{_esc(str(a.get("baseline_tag", "")))}</td></tr>'
+            )
+        parts.append('</tbody></table></div>')
 
-        parts.append('<div class="detail-item">')
-        parts.append(f'<h3>{_esc(name)}</h3>')
-        if issues:
-            parts.append(f'<div class="detail-issues"><strong>Issues:</strong> {_esc(issues)}</div>')
-        if evaluation:
-            parts.append(f'<div class="detail-eval"><strong>Evaluation:</strong> {_esc(evaluation)}</div>')
-        parts.append('</div>')
+    # ── Regressions ───────────────────────────────────────────────────────
+    regressions = data.get("regressions", [])
+    if regressions:
+        parts += ["<div class='card'>", f"<h2 style='margin-top:0'>Performance Regressions ({len(regressions)})</h2>"]
+        parts.append('<table class="data-table"><thead><tr>')
+        parts.append('<th>Op</th><th>Config</th><th>Best (ms)</th><th>Current (ms)</th><th>Delta</th><th>TFLOPS</th>')
+        parts.append('</tr></thead><tbody>')
+        for r in regressions:
+            tflops_str = f"{r['tflops']:.2f}" if r.get("tflops") else "—"
+            parts.append(
+                f'<tr><td><strong>{_esc(r["op"])}</strong></td>'
+                f'<td style="font-size:.75rem">{_esc(r["config"])}</td>'
+                f'<td>{r["best_ms"]:.4f}</td><td>{r["curr_ms"]:.4f}</td>'
+                f'<td><span class="badge badge-red">+{r["delta_pct"]:.1f}%</span></td>'
+                f'<td>{tflops_str}</td></tr>'
+            )
+        parts.append('</tbody></table></div>')
 
-    parts.append("</div>")  # card
+    # ── Improvements ──────────────────────────────────────────────────────
+    improvements = data.get("improvements", [])
+    if improvements:
+        parts += ["<div class='card'>", f"<h2 style='margin-top:0'>Performance Improvements ({len(improvements)})</h2>"]
+        parts.append('<table class="data-table"><thead><tr>')
+        parts.append('<th>Op</th><th>Config</th><th>Prev Best (ms)</th><th>Current (ms)</th><th>Delta</th><th>TFLOPS</th>')
+        parts.append('</tr></thead><tbody>')
+        for r in improvements:
+            tflops_str = f"{r['tflops']:.2f}" if r.get("tflops") else "—"
+            parts.append(
+                f'<tr><td><strong>{_esc(r["op"])}</strong></td>'
+                f'<td style="font-size:.75rem">{_esc(r["config"])}</td>'
+                f'<td>{r["best_ms"]:.4f}</td><td>{r["curr_ms"]:.4f}</td>'
+                f'<td><span class="badge badge-green">{r["delta_pct"]:.1f}%</span></td>'
+                f'<td>{tflops_str}</td></tr>'
+            )
+        parts.append('</tbody></table></div>')
 
-    # ── Section 5: Overall assessment ────────────────────────────────────────
+    # ── Category Analysis ─────────────────────────────────────────────────
+    if any(ca.get("issues") or ca.get("evaluation") for ca in cat_analysis.values()):
+        parts += ["<div class='card'>", "<h2 style='margin-top:0'>Category Analysis</h2>"]
+        for cat_name in sorted(cat_analysis):
+            ca = cat_analysis[cat_name]
+            issues = ca.get("issues", "")
+            evaluation = ca.get("evaluation", "")
+            if not issues and not evaluation:
+                continue
+            parts.append('<div class="detail-item">')
+            parts.append(f'<h3>{_esc(cat_name)}</h3>')
+            if issues:
+                parts.append(f'<div class="detail-issues"><strong>Issues:</strong> {_esc(issues)}</div>')
+            if evaluation:
+                parts.append(f'<div class="detail-eval"><strong>Evaluation:</strong> {_esc(evaluation)}</div>')
+            parts.append('</div>')
+        parts.append("</div>")
+
+    # ── Overall Assessment ────────────────────────────────────────────────
     overall = analysis.get("overall", {})
     summary = overall.get("summary", "")
-    recs    = overall.get("recommendations", [])
+    recs = overall.get("recommendations", [])
 
     parts += ["<div class='card'>", "<h2 style='margin-top:0'>Overall Assessment</h2>"]
     if summary:
         parts.append(f"<p style='font-size:.88rem;line-height:1.6'>{_esc(summary)}</p>")
     if recs:
-        parts.append("<h3>Recommendations</h3>")
-        parts.append("<ol class='rec-list'>")
+        parts.append("<h3>Recommendations</h3><ol class='rec-list'>")
         for r in recs:
             parts.append(f"<li>{_esc(r)}</li>")
         parts.append("</ol>")
     parts.append("</div>")
 
-    # ── Footer ───────────────────────────────────────────────────────────────
+    # ── Footer ────────────────────────────────────────────────────────────
     parts += [
         "<p style='text-align:center;color:var(--muted);font-size:.72rem;margin-top:1.5rem'>",
         "Generated by Claude &mdash; review for accuracy before acting on recommendations.",
@@ -381,26 +398,16 @@ def build_html(args, prog: dict | None, analysis: dict | None, registry_ops: dic
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Generate TileOPs nightly HTML report")
-    parser.add_argument("--date",          required=True, help="Run date timestamp")
-    parser.add_argument("--commit",        required=True, help="Git commit hash")
-    parser.add_argument("--report-dir",    required=True, help="Report directory")
-    parser.add_argument("--html-output",   required=True, help="HTML output path")
-    parser.add_argument("--analysis-json", default=None,  help="analysis.json path")
-    parser.add_argument("--registry",      required=True, help="op_registry.json path")
+    parser.add_argument("--date", required=True, help="Run date timestamp")
+    parser.add_argument("--commit", required=True, help="Git commit hash")
+    parser.add_argument("--report-dir", required=True, help="Report directory")
+    parser.add_argument("--html-output", required=True, help="HTML output path")
+    parser.add_argument("--nightly-data", required=True, help="nightly_data.json path")
+    parser.add_argument("--analysis-json", default=None, help="analysis.json path")
     args = parser.parse_args()
 
-    # Load op_registry.json
-    reg = None
-    registry_ops = None
-    prog = None
-    try:
-        reg = json.loads(Path(args.registry).read_text())
-        registry_ops = reg.get("ops")
-        prog = reg.get("summary")
-    except Exception:
-        pass
+    data = json.loads(Path(args.nightly_data).read_text())
 
-    # Load analysis.json
     analysis = None
     if args.analysis_json and os.path.exists(args.analysis_json):
         try:
@@ -408,12 +415,25 @@ def main() -> None:
         except Exception:
             pass
 
-    html = build_html(args, prog, analysis, registry_ops)
+    html = build_html(args, data, analysis)
 
     # Write summary.json for gen_index.py
-    if prog:
-        summary_path = Path(args.report_dir) / "summary.json"
-        summary_path.write_text(json.dumps(prog, ensure_ascii=False, indent=2))
+    test = data.get("test", {})
+    bench = data.get("bench", {})
+    summary = {
+        "test_total": test.get("total_cases", 0),
+        "test_passed": test.get("passed_cases", 0),
+        "test_failed": test.get("failed_cases", 0),
+        "test_ops": test.get("total_ops", 0),
+        "bench_configs": bench.get("total_configs", 0),
+        "bench_ops": bench.get("total_ops", 0),
+        "baseline_alerts": len(data.get("baseline_alerts", [])),
+        "categories": len(data.get("categories", {})),
+    }
+    summary_path = Path(args.report_dir) / "summary.json"
+    summary_path.parent.mkdir(parents=True, exist_ok=True)
+    summary_path.write_text(json.dumps(summary, ensure_ascii=False, indent=2))
+
     Path(args.html_output).parent.mkdir(parents=True, exist_ok=True)
     Path(args.html_output).write_text(html)
     print(f"HTML report: {args.html_output}")

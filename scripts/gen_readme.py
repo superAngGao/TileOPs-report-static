@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""gen_readme.py — Generate README.md by filling readme_template.md with registry data."""
+"""gen_readme.py — Generate README.md from nightly_data.json + analysis.json."""
 
 import argparse
 import json
@@ -15,18 +15,6 @@ def _bar(count: int, total: int, width: int = 15) -> str:
         return "`" + "\u2591" * width + "` 0%"
     filled = round(count / total * width)
     return f"`{'\u2588' * filled}{'\u2591' * (width - filled)}` {count}/{total}"
-
-
-def _status_icon(impl: bool, tested: bool, test_failed: bool, bench_ok) -> str:
-    if impl and tested and bench_ok is True:
-        return "\u2705"
-    if impl and tested:
-        return "\U0001f7e1"
-    if impl and test_failed:
-        return "\u274c"
-    if impl:
-        return "\U0001f7e6"
-    return "\u2b1c"
 
 
 def _score_display(score) -> str:
@@ -56,19 +44,12 @@ def _build_assessment(overall: dict) -> str:
     return "\n".join(lines)
 
 
-def _build_category(cat: dict, cat_analysis: dict, ops_registry: dict) -> str:
-    name = cat["name"]
-    t = cat["total_ops"]
-    im = cat["impl_ops"]
-    te = cat.get("tested_ops", 0)
-    be = cat.get("benched_ops", 0)
-    d = cat["done_ops"]
-
-    ca = cat_analysis.get(name, {})
+def _build_category(cat_name: str, cat_stats: dict, cat_analysis: dict,
+                    test_ops: dict, bench_ops: dict) -> str:
+    ca = cat_analysis.get(cat_name, {})
     fs = ca.get("func_score")
     ps = ca.get("perf_score")
 
-    # Header with scores
     score_parts = []
     if fs is not None:
         score_parts.append(f"Func: {_score_display(fs)}")
@@ -76,107 +57,103 @@ def _build_category(cat: dict, cat_analysis: dict, ops_registry: dict) -> str:
         score_parts.append(f"Perf: {_score_display(ps)}")
     score_text = " | " + " | ".join(score_parts) if score_parts else ""
 
-    lines = [
-        f"### {name}{score_text}",
-        "",
-        "| | Progress | |",
-        "|:--|:---------|:--|",
-        f"| Impl | {_bar(im, t)} | |",
-        f"| Test | {_bar(te, t)} | |",
-        f"| Bench | {_bar(be, t)} | |",
-        "",
-    ]
+    t_ops = cat_stats.get("test_ops", 0)
+    t_passed = cat_stats.get("test_passed", 0)
+    t_failed = cat_stats.get("test_failed", 0)
+    b_configs = cat_stats.get("bench_configs", 0)
+    b_qualified = cat_stats.get("bench_qualified", 0)
+    b_underperf = cat_stats.get("bench_underperforming", 0)
+    avg_ratio = cat_stats.get("avg_ratio")
 
-    # Claude analysis
+    ratio_str = f" | Avg ratio: {avg_ratio:.2f}" if avg_ratio else ""
+
+    lines = [
+        f"### {cat_name}{score_text}",
+        "",
+        "| Metric | Value |",
+        "|:-------|------:|",
+        f"| Test Ops | {t_passed}/{t_ops} passed |",
+        f"| Bench Configs | {b_qualified} qualified / {b_configs} total |",
+    ]
+    if avg_ratio is not None:
+        lines.append(f"| Avg Ratio | {avg_ratio:.2f} |")
+    lines.append("")
+
     if ca.get("issues"):
         lines += [f"> **Issues:** {ca['issues']}", ""]
     if ca.get("evaluation"):
         lines += [f"> **Evaluation:** {ca['evaluation']}", ""]
 
     # Per-op table (collapsed)
-    lines += [
-        "<details>",
-        f"<summary>{d}/{t} done - click to expand</summary>",
-        "",
-        "| | Operator | Test | Bench | Ratio |",
-        "|:--|:---------|:----:|:-----:|------:|",
-    ]
+    # Collect ops in this category
+    cat_test = {k: v for k, v in test_ops.items() if v.get("category") == cat_name}
+    cat_bench = {k: v for k, v in bench_ops.items() if v.get("category") == cat_name}
+    all_ops = sorted(set(cat_test) | set(cat_bench))
 
-    for op_s in cat.get("ops", []):
-        op_id = op_s["id"]
-        op_reg = ops_registry.get(op_id, {})
-        icon = _status_icon(
-            op_s.get("implemented", False),
-            op_s.get("tested", False),
-            op_s.get("test_failed", False),
-            op_s.get("bench_ok"),
-        )
-        ts_s = (op_reg.get("test_status") or {}).get("status", "-")
-        bs_s = (op_reg.get("bench_status") or {}).get("status", "-")
-        ratio = (op_reg.get("bench_status") or {}).get("ratio")
-        ratio_s = f"{ratio:.2f}" if ratio is not None else "-"
-        lines.append(f"| {icon} | {op_s['name']} | {ts_s} | {bs_s} | {ratio_s} |")
+    if all_ops:
+        lines += [
+            "<details>",
+            f"<summary>{len(all_ops)} ops - click to expand</summary>",
+            "",
+            "| Op | Test (P/F/S) | Max Err | Bench Configs | Avg Ratio |",
+            "|:---|:-------------|--------:|--------------:|----------:|",
+        ]
 
-    lines += ["", "</details>", ""]
+        for op_name in all_ops:
+            t = cat_test.get(op_name, {})
+            b = cat_bench.get(op_name, {})
+
+            if t:
+                test_str = f"{t.get('passed', 0)}/{t.get('failed', 0)}/{t.get('skipped', 0)}"
+                err = t.get("max_abs_err")
+                err_str = f"{err:.2e}" if err else "\u2014"
+            else:
+                test_str = "\u2014"
+                err_str = "\u2014"
+
+            configs = b.get("configs", [])
+            n_configs = len(configs)
+            ratios = [c.get("baseline_ratio") for c in configs if c.get("baseline_ratio")]
+            avg_r = sum(ratios) / len(ratios) if ratios else None
+            ratio_s = f"{avg_r:.2f}" if avg_r else "\u2014"
+
+            lines.append(f"| {op_name} | {test_str} | {err_str} | {n_configs} | {ratio_s} |")
+
+        lines += ["", "</details>", ""]
+
     return "\n".join(lines)
 
 
 # ── Main ─────────────────────────────────────────────────────────────────────
 
-def build_readme(registry: dict, analysis: dict | None, pages_url: str) -> str:
+def build_readme(data: dict, analysis: dict | None, pages_url: str) -> str:
     template = TEMPLATE_PATH.read_text(encoding="utf-8")
 
-    summary = registry.get("summary", {})
-    ops = registry.get("ops", {})
-    generated = registry.get("generated_at", "unknown")
+    test = data.get("test", {})
+    bench = data.get("bench", {})
+    categories = data.get("categories", {})
 
-    total = summary.get("total_ops", 0)
-    impl = summary.get("impl_ops", 0)
-    tested = summary.get("tested_ops", 0)
-    benched = summary.get("benched_ops", 0)
-    done = summary.get("done_ops", 0)
-
-    # Status counts
-    ts = {"passed": 0, "failed": 0, "missing": 0}
-    bs = {"qualified": 0, "passed": 0, "underperforming": 0, "failed": 0, "missing": 0}
-    for op in ops.values():
-        t = (op.get("test_status") or {}).get("status", "missing")
-        b = (op.get("bench_status") or {}).get("status", "missing")
-        ts[t] = ts.get(t, 0) + 1
-        bs[b] = bs.get(b, 0) + 1
-
-    # Build sections
     cat_analysis = (analysis or {}).get("categories", {})
     overall = (analysis or {}).get("overall", {})
 
     assessment_section = _build_assessment(overall)
     categories_section = "\n".join(
-        _build_category(cat, cat_analysis, ops)
-        for cat in summary.get("categories", [])
+        _build_category(name, categories[name], cat_analysis,
+                        test.get("ops", {}), bench.get("ops", {}))
+        for name in sorted(categories)
     )
 
-    # Fill template
     replacements = {
-        "{{done}}": str(done),
-        "{{total}}": str(total),
-        "{{pct}}": str(done * 100 // total if total else 0),
+        "{{test_passed}}": str(test.get("passed_cases", 0)),
+        "{{test_total}}": str(test.get("total_cases", 0)),
+        "{{test_failed}}": str(test.get("failed_cases", 0)),
+        "{{num_ops}}": str(test.get("total_ops", 0)),
+        "{{num_categories}}": str(len(categories)),
+        "{{bench_configs}}": str(bench.get("total_configs", 0)),
+        "{{bench_ops}}": str(bench.get("total_ops", 0)),
+        "{{baseline_alerts}}": str(len(data.get("baseline_alerts", []))),
         "{{pages_url}}": pages_url,
-        "{{generated}}": generated,
-        "{{impl}}": str(impl),
-        "{{tested}}": str(tested),
-        "{{benched}}": str(benched),
-        "{{impl_bar}}": _bar(impl, total),
-        "{{test_bar}}": _bar(tested, total),
-        "{{bench_bar}}": _bar(benched, total),
-        "{{done_bar}}": _bar(done, total),
-        "{{ts_passed}}": str(ts["passed"]),
-        "{{ts_failed}}": str(ts["failed"]),
-        "{{ts_missing}}": str(ts["missing"]),
-        "{{bs_qualified}}": str(bs.get("qualified", 0)),
-        "{{bs_passed}}": str(bs.get("passed", 0)),
-        "{{bs_underperforming}}": str(bs.get("underperforming", 0)),
-        "{{bs_failed}}": str(bs.get("failed", 0)),
-        "{{bs_missing}}": str(bs.get("missing", 0)),
+        "{{generated}}": data.get("meta", {}).get("generated_at", "unknown"),
         "{{assessment_section}}": assessment_section,
         "{{categories_section}}": categories_section,
     }
@@ -184,19 +161,19 @@ def build_readme(registry: dict, analysis: dict | None, pages_url: str) -> str:
     result = template
     for key, value in replacements.items():
         result = result.replace(key, value)
-
     return result
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Generate README.md from template + registry")
-    parser.add_argument("--registry", required=True, help="op_registry.json path")
+    parser = argparse.ArgumentParser(description="Generate README.md from nightly data")
+    parser.add_argument("--nightly-data", required=True, help="nightly_data.json path")
     parser.add_argument("--analysis", default=None, help="analysis.json path")
     parser.add_argument("--output", default="README.md", help="Output path")
-    parser.add_argument("--pages-url", default="https://superanggao.github.io/TileOPs-report/nightly/")
+    parser.add_argument("--pages-url",
+                        default="https://superanggao.github.io/TileOPs-report-static/nightly/")
     args = parser.parse_args()
 
-    registry = json.loads(Path(args.registry).read_text())
+    data = json.loads(Path(args.nightly_data).read_text())
 
     analysis = None
     if args.analysis and Path(args.analysis).exists():
@@ -205,7 +182,7 @@ def main() -> None:
         except Exception:
             pass
 
-    readme = build_readme(registry, analysis, args.pages_url)
+    readme = build_readme(data, analysis, args.pages_url)
     Path(args.output).write_text(readme)
     print(f"README written: {args.output}")
 
