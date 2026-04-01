@@ -138,38 +138,96 @@ def _short_config_name(name: str) -> str:
     return "_".join(parts[-3:]) if len(parts) > 3 else name
 
 
-def _collect_baselines(cfg: dict) -> list[tuple[str, float]]:
-    """Collect all baseline (tag, latency_ms) pairs from a config entry.
+def _collect_baselines(cfg: dict, suffix: str = "latency_ms") -> list[tuple[str, float]]:
+    """Collect all baseline (tag, value) pairs from a config entry.
 
-    Includes the primary baseline_tag and any tag-prefixed baselines.
+    *suffix* selects the metric: "latency_ms" or "tflops".
+    Includes the primary baseline and any tag-prefixed baselines.
     """
     baselines = []
-    # Primary baseline
     primary_tag = cfg.get("baseline_tag")
-    primary_ms = cfg.get("baseline_latency_ms")
+    primary_val = cfg.get(f"baseline_{suffix}")
     seen_tags = set()
-    if primary_tag and primary_ms is not None:
-        baselines.append((primary_tag, primary_ms))
+    if primary_tag and primary_val is not None:
+        baselines.append((primary_tag, primary_val))
         seen_tags.add(primary_tag)
 
-    # Tag-prefixed baselines from baseline_tags list
     for tag in cfg.get("baseline_tags", []):
         if tag in seen_tags:
             continue
-        ms = cfg.get(f"{tag}_latency_ms")
-        if ms is not None:
-            baselines.append((tag, ms))
+        val = cfg.get(f"{tag}_{suffix}")
+        if val is not None:
+            baselines.append((tag, val))
             seen_tags.add(tag)
 
     return baselines
 
 
+# Fixed bar width — calibrated for 3-bar layout, used everywhere for consistency.
+_BAR_WIDTH = 0.6
+_MAX_SLOTS = 3  # always reserve space for 3 bars so widths look uniform
+
+
+def _draw_bar_subplots(op_name: str, valid: list[dict], all_tags: list[str],
+                       tag_color: dict, suffix: str, ylabel: str,
+                       title_suffix: str, output_dir: Path) -> Path | None:
+    """Shared logic for bar subplot charts (latency or tflops)."""
+    n = len(valid)
+    ncols = min(4, n)
+    nrows = (n + ncols - 1) // ncols
+
+    fig, axes = plt.subplots(nrows, ncols,
+                             figsize=(4.5 * ncols, 3.5 * nrows),
+                             squeeze=False)
+
+    for idx, cfg in enumerate(valid):
+        row, col = divmod(idx, ncols)
+        ax = axes[row][col]
+
+        tileops_key = f"tileops_{suffix}"
+        tileops_val = cfg.get(tileops_key)
+        if tileops_val is None:
+            ax.set_visible(False)
+            continue
+
+        baselines = _collect_baselines(cfg, suffix)
+        labels = ["TileOPs"] + [tag for tag, _ in baselines]
+        values = [tileops_val] + [v for _, v in baselines]
+        colors = [_TILEOPS_COLOR] + [tag_color[tag] for tag, _ in baselines]
+
+        bars = ax.bar(range(len(labels)), values, color=colors, width=_BAR_WIDTH)
+
+        # Fix x-axis to always show _MAX_SLOTS positions for uniform bar width
+        ax.set_xlim(-0.5, _MAX_SLOTS - 0.5)
+        ax.set_xticks(range(len(labels)))
+        ax.set_xticklabels(labels, fontsize=7, rotation=30, ha="right")
+        ax.set_title(_short_config_name(cfg["name"]), fontsize=8)
+        ax.set_ylabel(ylabel, fontsize=8)
+        ax.tick_params(axis="y", labelsize=7)
+
+        for bar in bars:
+            h = bar.get_height()
+            ax.text(bar.get_x() + bar.get_width() / 2, h,
+                    f"{h:.3g}", ha="center", va="bottom", fontsize=7)
+
+    for idx in range(n, nrows * ncols):
+        row, col = divmod(idx, ncols)
+        axes[row][col].set_visible(False)
+
+    fig.suptitle(f"{op_name} — {title_suffix}", fontsize=12, y=1.01)
+    fig.tight_layout()
+    out = output_dir / f"{op_name}_bar_{suffix}.png"
+    fig.savefig(out, dpi=150, bbox_inches="tight")
+    plt.close(fig)
+    return out
+
+
 def generate_bar_comparison(op_name: str, metrics: list[str],
                             nightly: dict, output_dir: Path) -> list[Path]:
-    """Generate subplot bar chart: one subplot per config, tileops vs all baselines.
+    """Generate subplot bar charts: latency and tflops, one subplot per config.
 
-    Each config gets its own subplot so different latency scales don't squash
-    smaller values.  Each baseline gets its own colored bar.
+    Each config gets its own subplot.  Each baseline gets its own colored bar.
+    Bar width is fixed to match the 3-bar layout.
     """
     bench = nightly.get("bench", {})
     op_data = bench.get("ops", {}).get(op_name, {})
@@ -185,55 +243,30 @@ def generate_bar_comparison(op_name: str, metrics: list[str],
     if not valid:
         return []
 
-    # Collect all unique baseline tags across configs for consistent coloring
-    all_tags = sorted({tag for c in valid for tag, _ in _collect_baselines(c)})
+    # Consistent coloring across all configs
+    all_tags = sorted({tag for c in valid
+                       for tag, _ in _collect_baselines(c, "latency_ms")
+                                   + _collect_baselines(c, "tflops")})
     tag_color = {tag: _BASELINE_TAG_COLORS[i % len(_BASELINE_TAG_COLORS)]
                  for i, tag in enumerate(all_tags)}
 
-    # Layout: up to 4 columns
-    n = len(valid)
-    ncols = min(4, n)
-    nrows = (n + ncols - 1) // ncols
+    paths = []
 
-    fig, axes = plt.subplots(nrows, ncols,
-                             figsize=(4.5 * ncols, 3.5 * nrows),
-                             squeeze=False)
+    # Latency chart
+    out = _draw_bar_subplots(op_name, valid, all_tags, tag_color,
+                             "latency_ms", "ms", "Latency Comparison", output_dir)
+    if out:
+        paths.append(out)
 
-    for idx, cfg in enumerate(valid):
-        row, col = divmod(idx, ncols)
-        ax = axes[row][col]
+    # TFLOPS chart
+    valid_tflops = [c for c in valid if c.get("tileops_tflops") is not None]
+    if valid_tflops:
+        out = _draw_bar_subplots(op_name, valid_tflops, all_tags, tag_color,
+                                 "tflops", "TFLOPS", "TFLOPS Comparison", output_dir)
+        if out:
+            paths.append(out)
 
-        tileops_ms = cfg["tileops_latency_ms"]
-        baselines = _collect_baselines(cfg)
-
-        labels = ["TileOPs"] + [tag for tag, _ in baselines]
-        values = [tileops_ms] + [ms for _, ms in baselines]
-        colors = [_TILEOPS_COLOR] + [tag_color[tag] for tag, _ in baselines]
-
-        bars = ax.bar(range(len(labels)), values, color=colors, width=0.6)
-        ax.set_xticks(range(len(labels)))
-        ax.set_xticklabels(labels, fontsize=7, rotation=30, ha="right")
-        ax.set_title(_short_config_name(cfg["name"]), fontsize=8)
-        ax.set_ylabel("ms", fontsize=8)
-        ax.tick_params(axis="y", labelsize=7)
-
-        # Show value on top of each bar
-        for bar in bars:
-            h = bar.get_height()
-            ax.text(bar.get_x() + bar.get_width() / 2, h,
-                    f"{h:.3g}", ha="center", va="bottom", fontsize=7)
-
-    # Hide unused subplots
-    for idx in range(n, nrows * ncols):
-        row, col = divmod(idx, ncols)
-        axes[row][col].set_visible(False)
-
-    fig.suptitle(f"{op_name} — TileOPs vs Baseline", fontsize=12, y=1.01)
-    fig.tight_layout()
-    out = output_dir / f"{op_name}_bar_comparison.png"
-    fig.savefig(out, dpi=150, bbox_inches="tight")
-    plt.close(fig)
-    return [out]
+    return paths
 
 
 # ---------------------------------------------------------------------------
