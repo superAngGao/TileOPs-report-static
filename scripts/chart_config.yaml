@@ -12,3 +12,27 @@ operators:
         metrics:
           - tileops_latency_ms
           - baseline_latency_ms
+
+  - name: GroupQueryAttentionDecodeWithKVCacheOp
+    charts:
+      - type: trend
+        metrics:
+          - tileops_latency_ms
+          - tileops_tflops
+          - baseline_ratio
+      - type: bar_comparison
+        metrics:
+          - tileops_latency_ms
+          - baseline_latency_ms
+
+  - name: GroupQueryAttentionDecodePagedWithKVCacheOp
+    charts:
+      - type: trend
+        metrics:
+          - tileops_latency_ms
+          - tileops_tflops
+          - baseline_ratio
+      - type: bar_comparison
+        metrics:
+          - tileops_latency_ms
+          - baseline_latency_ms
