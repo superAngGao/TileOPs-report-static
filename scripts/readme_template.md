@@ -24,6 +24,8 @@ Last updated: `{{generated}}`
 
 {{assessment_section}}
 
+{{charts_section}}
+
 ## Categories
 
 {{categories_section}}

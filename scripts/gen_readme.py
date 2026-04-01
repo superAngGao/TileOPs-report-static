@@ -5,6 +5,8 @@ import argparse
 import json
 from pathlib import Path
 
+import yaml
+
 TEMPLATE_PATH = Path(__file__).parent / "readme_template.md"
 
 
@@ -126,7 +128,28 @@ def _build_category(cat_name: str, cat_stats: dict, cat_analysis: dict,
 
 # ── Main ─────────────────────────────────────────────────────────────────────
 
-def build_readme(data: dict, analysis: dict | None, pages_url: str) -> str:
+def _build_charts_section(chart_config: dict | None, charts_base_url: str) -> str:
+    """Generate markdown image references for all configured op charts."""
+    if not chart_config:
+        return ""
+    operators = chart_config.get("operators", [])
+    if not operators:
+        return ""
+
+    lines = ["## Performance Charts", ""]
+    for op in operators:
+        op_name = op["name"]
+        has_bar = any(c["type"] == "bar_comparison" for c in op.get("charts", []))
+        if has_bar:
+            lines.append(f"### {op_name}")
+            lines.append("")
+            lines.append(f"![{op_name} tflops]({charts_base_url}{op_name}_bar_tflops.png)")
+            lines.append("")
+    return "\n".join(lines)
+
+
+def build_readme(data: dict, analysis: dict | None, pages_url: str,
+                 chart_config: dict | None = None) -> str:
     template = TEMPLATE_PATH.read_text(encoding="utf-8")
 
     test = data.get("test", {})
@@ -143,6 +166,9 @@ def build_readme(data: dict, analysis: dict | None, pages_url: str) -> str:
         for name in sorted(categories)
     )
 
+    charts_base_url = pages_url.rstrip("/").rsplit("/nightly", 1)[0] + "/latest/charts/"
+    charts_section = _build_charts_section(chart_config, charts_base_url)
+
     replacements = {
         "{{test_passed}}": str(test.get("passed_cases", 0)),
         "{{test_total}}": str(test.get("total_cases", 0)),
@@ -156,6 +182,7 @@ def build_readme(data: dict, analysis: dict | None, pages_url: str) -> str:
         "{{generated}}": data.get("meta", {}).get("generated_at", "unknown"),
         "{{assessment_section}}": assessment_section,
         "{{categories_section}}": categories_section,
+        "{{charts_section}}": charts_section,
     }
 
     result = template
@@ -169,6 +196,7 @@ def main() -> None:
     parser.add_argument("--nightly-data", required=True, help="nightly_data.json path")
     parser.add_argument("--analysis", default=None, help="analysis.json path")
     parser.add_argument("--output", default="README.md", help="Output path")
+    parser.add_argument("--chart-config", default=None, help="chart_config.yaml path")
     parser.add_argument("--pages-url",
                         default="https://superanggao.github.io/TileOPs-report-static/nightly/")
     args = parser.parse_args()
@@ -182,7 +210,11 @@ def main() -> None:
         except Exception:
             pass
 
-    readme = build_readme(data, analysis, args.pages_url)
+    chart_config = None
+    if args.chart_config and Path(args.chart_config).exists():
+        chart_config = yaml.safe_load(Path(args.chart_config).read_text())
+
+    readme = build_readme(data, analysis, args.pages_url, chart_config)
     Path(args.output).write_text(readme)
     print(f"README written: {args.output}")
 

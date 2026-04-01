@@ -258,9 +258,10 @@ jobs:
         continue-on-error: true
         run: |
           python scripts/gen_readme.py \
-            --nightly-data "${{ steps.prep.outputs.report_dir }}/nightly_data.json" \
-            --analysis     "${{ steps.prep.outputs.report_dir }}/analysis.json" \
-            --output       README.md
+            --nightly-data  "${{ steps.prep.outputs.report_dir }}/nightly_data.json" \
+            --analysis      "${{ steps.prep.outputs.report_dir }}/analysis.json" \
+            --chart-config  scripts/chart_config.yaml \
+            --output        README.md
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add README.md
@@ -272,6 +273,18 @@ jobs:
           fi
 
       # ── Deploy to gh-pages ──────────────────────────────────────────────
+
+      - name: Copy charts to latest/
+        if: steps.dedup.outputs.skip != 'true'
+        run: |
+          rm -rf _gh_pages/latest/charts
+          if [ -d "${{ steps.prep.outputs.report_dir }}/charts" ]; then
+            mkdir -p _gh_pages/latest
+            cp -r "${{ steps.prep.outputs.report_dir }}/charts" _gh_pages/latest/charts
+            echo "Copied charts to _gh_pages/latest/charts/"
+          else
+            echo "No charts directory found — skipping."
+          fi
 
       - name: Prune reports older than 14 days
         if: steps.dedup.outputs.skip != 'true'
