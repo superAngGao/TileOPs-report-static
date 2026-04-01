@@ -163,14 +163,15 @@ def _collect_baselines(cfg: dict, suffix: str = "latency_ms") -> list[tuple[str,
     return baselines
 
 
-# Fixed bar width — calibrated for 3-bar layout, used everywhere for consistency.
 _BAR_WIDTH = 0.6
-_MAX_SLOTS = 3  # always reserve space for 3 bars so widths look uniform
 
 
 def _draw_latency_subplots(op_name: str, valid: list[dict],
                            tag_color: dict, output_dir: Path) -> Path | None:
     """Latency bar chart: one subplot per config, each with TileOPs + baselines."""
+    # Find max number of bars across all configs for uniform x-axis width
+    max_bars = max(1 + len(_collect_baselines(c, "latency_ms")) for c in valid)
+
     n = len(valid)
     ncols = min(4, n)
     nrows = (n + ncols - 1) // ncols
@@ -194,7 +195,7 @@ def _draw_latency_subplots(op_name: str, valid: list[dict],
         colors = [_TILEOPS_COLOR] + [tag_color[tag] for tag, _ in baselines]
 
         bars = ax.bar(range(len(labels)), values, color=colors, width=_BAR_WIDTH)
-        ax.set_xlim(-0.5, _MAX_SLOTS - 0.5)
+        ax.set_xlim(-0.5, max_bars - 0.5)
         ax.set_xticks(range(len(labels)))
         ax.set_xticklabels(labels, fontsize=7, rotation=30, ha="right")
         ax.set_title(_short_config_name(cfg["name"]), fontsize=8)
