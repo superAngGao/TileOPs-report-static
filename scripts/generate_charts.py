@@ -169,9 +169,6 @@ _BAR_WIDTH = 0.6
 def _draw_latency_subplots(op_name: str, valid: list[dict],
                            tag_color: dict, output_dir: Path) -> Path | None:
     """Latency bar chart: one subplot per config, each with TileOPs + baselines."""
-    # Find max number of bars across all configs for uniform x-axis width
-    max_bars = max(1 + len(_collect_baselines(c, "latency_ms")) for c in valid)
-
     n = len(valid)
     ncols = min(4, n)
     nrows = (n + ncols - 1) // ncols
@@ -194,9 +191,10 @@ def _draw_latency_subplots(op_name: str, valid: list[dict],
         values = [tileops_val] + [v for _, v in baselines]
         colors = [_TILEOPS_COLOR] + [tag_color[tag] for tag, _ in baselines]
 
-        bars = ax.bar(range(len(labels)), values, color=colors, width=_BAR_WIDTH)
-        ax.set_xlim(-0.5, max_bars - 0.5)
-        ax.set_xticks(range(len(labels)))
+        n_bars = len(labels)
+        bars = ax.bar(range(n_bars), values, color=colors, width=_BAR_WIDTH)
+        ax.set_xlim(-0.5, n_bars - 0.5)
+        ax.set_xticks(range(n_bars))
         ax.set_xticklabels(labels, fontsize=7, rotation=30, ha="right")
         ax.set_title(_short_config_name(cfg["name"]), fontsize=8)
         ax.set_ylabel("ms", fontsize=8)
@@ -221,47 +219,67 @@ def _draw_latency_subplots(op_name: str, valid: list[dict],
 
 def _draw_tflops_grouped(op_name: str, valid: list[dict], all_tags: list[str],
                          tag_color: dict, output_dir: Path) -> Path | None:
-    """TFLOPS bar chart: single figure, configs on x-axis, grouped bars."""
-    import numpy as np
+    """TFLOPS bar chart: single figure, configs on x-axis, grouped bars.
 
-    # Sources: "tileops" + all baseline tags
-    sources = ["TileOPs"] + all_tags
-    n_sources = len(sources)
-    n_configs = len(valid)
+    Each config group only contains bars for available baselines (no empty slots).
+    Bar width and inter-bar gap are fixed so the visual density is consistent.
+    """
+    # Fixed bar dimensions (in data units)
+    bar_w = 0.18          # width of one bar
+    bar_gap = 0.02        # gap between bars within a group
+    group_gap = 0.5       # gap between config groups
 
-    bar_w = _BAR_WIDTH / n_sources  # width per bar within a group
-    x = np.arange(n_configs)
-
-    fig, ax = plt.subplots(figsize=(max(8, n_configs * 1.2), 5))
-
-    for i, src in enumerate(sources):
-        vals = []
-        for cfg in valid:
+    # For each config, figure out which sources have data
+    all_sources = ["TileOPs"] + all_tags
+    per_cfg_sources: list[list[tuple[str, float]]] = []
+    for cfg in valid:
+        sources = []
+        for src in all_sources:
             if src == "TileOPs":
-                vals.append(cfg.get("tileops_tflops", 0))
+                v = cfg.get("tileops_tflops")
             else:
-                # Try tag-prefixed first, fall back to baseline_tflops if primary
                 v = cfg.get(f"{src}_tflops")
                 if v is None and cfg.get("baseline_tag") == src:
                     v = cfg.get("baseline_tflops")
-                vals.append(v if v is not None else 0)
+            if v is not None:
+                sources.append((src, v))
+        per_cfg_sources.append(sources)
 
-        color = _TILEOPS_COLOR if src == "TileOPs" else tag_color.get(src, "#888")
-        offset = (i - (n_sources - 1) / 2) * bar_w
-        bars = ax.bar(x + offset, vals, bar_w * 0.9, label=src, color=color)
+    # Compute x positions: each group is as wide as its bars, groups separated by group_gap
+    group_centers = []
+    cursor = 0.0
+    for sources in per_cfg_sources:
+        n = len(sources)
+        group_width = n * bar_w + (n - 1) * bar_gap
+        group_centers.append(cursor + group_width / 2)
+        cursor += group_width + group_gap
 
-        for bar in bars:
-            h = bar.get_height()
-            if h > 0:
-                ax.text(bar.get_x() + bar.get_width() / 2, h,
-                        f"{h:.1f}", ha="center", va="bottom", fontsize=7)
+    fig_width = max(8, cursor * 0.8 + 2)
+    fig, ax = plt.subplots(figsize=(fig_width, 5))
+
+    # Draw bars and build legend handles
+    legend_handles = {}
+    for cfg_idx, (cfg, sources, center) in enumerate(
+            zip(valid, per_cfg_sources, group_centers)):
+        n = len(sources)
+        group_width = n * bar_w + (n - 1) * bar_gap
+        start_x = center - group_width / 2
+
+        for i, (src, val) in enumerate(sources):
+            x = start_x + i * (bar_w + bar_gap)
+            color = _TILEOPS_COLOR if src == "TileOPs" else tag_color.get(src, "#888")
+            bar = ax.bar(x, val, bar_w, color=color, align="edge")
+            ax.text(x + bar_w / 2, val,
+                    f"{val:.1f}", ha="center", va="bottom", fontsize=7)
+            if src not in legend_handles:
+                legend_handles[src] = bar[0]
 
     config_labels = [_short_config_name(c["name"]) for c in valid]
-    ax.set_xticks(x)
+    ax.set_xticks(group_centers)
     ax.set_xticklabels(config_labels, rotation=45, ha="right", fontsize=8)
     ax.set_ylabel("TFLOPS", fontsize=10)
     ax.set_title(f"{op_name} — TFLOPS Comparison", fontsize=12)
-    ax.legend(fontsize=8)
+    ax.legend(legend_handles.values(), legend_handles.keys(), fontsize=8)
 
     fig.tight_layout()
     out = output_dir / f"{op_name}_bar_tflops.png"
