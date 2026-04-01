@@ -121,63 +121,92 @@ def generate_trend(op_name: str, metrics: list[str],
 # Bar comparison chart
 # ---------------------------------------------------------------------------
 
+# Distinct colors for different baseline tags
+_BASELINE_TAG_COLORS = [
+    "#dc2626", "#7c3aed", "#0891b2", "#ca8a04", "#be185d",
+    "#059669", "#9333ea", "#e11d48", "#0d9488", "#c2410c",
+]
+
+_TILEOPS_COLOR = "#2563eb"
+
+
+def _short_config_name(name: str) -> str:
+    """Shorten a config name for display."""
+    if "[" in name:
+        return name.split("[")[-1].rstrip("]")
+    parts = name.split("_")
+    return "_".join(parts[-3:]) if len(parts) > 3 else name
+
+
 def generate_bar_comparison(op_name: str, metrics: list[str],
                             nightly: dict, output_dir: Path) -> list[Path]:
-    """Generate grouped bar chart comparing metrics per config for current run."""
+    """Generate subplot bar chart: one subplot per config, tileops vs baseline.
+
+    Each config gets its own subplot so different latency scales don't squash
+    smaller values.  Baseline bars are colored by baseline_tag.
+    """
     bench = nightly.get("bench", {})
     op_data = bench.get("ops", {}).get(op_name, {})
     configs = op_data.get("configs", [])
     if not configs:
         return []
 
-    # Filter to configs that have all requested metrics
-    valid_configs = []
-    for cfg in configs:
-        if all(cfg.get(m) is not None for m in metrics):
-            valid_configs.append(cfg)
-
-    if not valid_configs:
+    # Keep configs that have both tileops and baseline latency
+    valid = [c for c in configs
+             if c.get("tileops_latency_ms") is not None
+             and c.get("baseline_latency_ms") is not None]
+    if not valid:
         return []
 
-    # Shorten config names for display
-    def short_name(name: str) -> str:
-        # e.g. "test_r2_small_tensor_unary[4096-dtype0]" → last part
-        if "[" in name:
-            return name.split("[")[-1].rstrip("]")
-        parts = name.split("_")
-        return "_".join(parts[-3:]) if len(parts) > 3 else name
+    # Assign a color to each unique baseline_tag
+    tags = sorted({c.get("baseline_tag", "baseline") for c in valid})
+    tag_color = {tag: _BASELINE_TAG_COLORS[i % len(_BASELINE_TAG_COLORS)]
+                 for i, tag in enumerate(tags)}
 
-    labels = [short_name(c["name"]) for c in valid_configs]
+    # Layout: up to 4 columns
+    n = len(valid)
+    ncols = min(4, n)
+    nrows = (n + ncols - 1) // ncols
 
-    # Limit to top 20 configs by tileops_latency_ms to avoid overcrowding
-    if len(valid_configs) > 20:
-        paired = list(zip(valid_configs, labels))
-        paired.sort(key=lambda x: x[0].get("tileops_latency_ms", 0), reverse=True)
-        paired = paired[:20]
-        valid_configs = [p[0] for p in paired]
-        labels = [p[1] for p in paired]
+    fig, axes = plt.subplots(nrows, ncols,
+                             figsize=(4 * ncols, 3.5 * nrows),
+                             squeeze=False)
 
-    import numpy as np
-    x = np.arange(len(labels))
-    width = 0.8 / len(metrics)
+    for idx, cfg in enumerate(valid):
+        row, col = divmod(idx, ncols)
+        ax = axes[row][col]
 
-    fig, ax = plt.subplots(figsize=(max(8, len(labels) * 0.6), 5))
+        tileops_ms = cfg["tileops_latency_ms"]
+        baseline_ms = cfg["baseline_latency_ms"]
+        tag = cfg.get("baseline_tag", "baseline")
 
-    for i, metric in enumerate(metrics):
-        vals = [c[metric] for c in valid_configs]
-        color = _METRIC_COLORS.get(metric, None)
-        ax.bar(x + i * width, vals, width, label=_METRIC_LABELS.get(metric, metric),
-               color=color)
+        bars = ax.bar(
+            [0, 1],
+            [tileops_ms, baseline_ms],
+            color=[_TILEOPS_COLOR, tag_color[tag]],
+            width=0.6,
+        )
+        ax.set_xticks([0, 1])
+        ax.set_xticklabels(["TileOPs", tag], fontsize=8)
+        ax.set_title(_short_config_name(cfg["name"]), fontsize=8)
+        ax.set_ylabel("ms", fontsize=8)
+        ax.tick_params(axis="y", labelsize=7)
 
-    ax.set_title(f"{op_name} — TileOPs vs Baseline")
-    ax.set_ylabel("Latency (ms)")
-    ax.set_xticks(x + width * (len(metrics) - 1) / 2)
-    ax.set_xticklabels(labels, rotation=45, ha="right")
-    ax.legend()
+        # Show value on top of each bar
+        for bar in bars:
+            h = bar.get_height()
+            ax.text(bar.get_x() + bar.get_width() / 2, h,
+                    f"{h:.3g}", ha="center", va="bottom", fontsize=7)
 
+    # Hide unused subplots
+    for idx in range(n, nrows * ncols):
+        row, col = divmod(idx, ncols)
+        axes[row][col].set_visible(False)
+
+    fig.suptitle(f"{op_name} — TileOPs vs Baseline", fontsize=12, y=1.01)
     fig.tight_layout()
     out = output_dir / f"{op_name}_bar_comparison.png"
-    fig.savefig(out, dpi=150)
+    fig.savefig(out, dpi=150, bbox_inches="tight")
     plt.close(fig)
     return [out]
 
