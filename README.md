@@ -6,12 +6,12 @@
 
 ### GroupQueryAttentionFwdOp
 
-![GQA Forward TFLOPS](https://superanggao.github.io/TileOPs-report-static/latest/charts/GroupQueryAttentionFwdOp_bar_tflops.png)
+![GQA Forward TFLOPS](https://raw.githubusercontent.com/superAngGao/TileOPs-report-static/gh-pages/latest/charts/GroupQueryAttentionFwdOp_bar_tflops.png)
 
 ### GroupQueryAttentionDecodeWithKVCacheOp
 
-![GQA Decode TFLOPS](https://superanggao.github.io/TileOPs-report-static/latest/charts/GroupQueryAttentionDecodeWithKVCacheOp_bar_tflops.png)
+![GQA Decode TFLOPS](https://raw.githubusercontent.com/superAngGao/TileOPs-report-static/gh-pages/latest/charts/GroupQueryAttentionDecodeWithKVCacheOp_bar_tflops.png)
 
 ### GroupQueryAttentionDecodePagedWithKVCacheOp
 
-![GQA Decode Paged TFLOPS](https://superanggao.github.io/TileOPs-report-static/latest/charts/GroupQueryAttentionDecodePagedWithKVCacheOp_bar_tflops.png)
+![GQA Decode Paged TFLOPS](https://raw.githubusercontent.com/superAngGao/TileOPs-report-static/gh-pages/latest/charts/GroupQueryAttentionDecodePagedWithKVCacheOp_bar_tflops.png)
