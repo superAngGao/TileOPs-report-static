@@ -1,6 +1,6 @@
 # TileOPs Nightly Report
 
-[View full HTML report](https://superanggao.github.io/TileOPs-report-static/nightly/)
+[View full HTML report](https://github.com/superAngGao/TileOPs-report-static/tree/gh-pages/nightly)
 
 ## Performance Charts
 
