@@ -1,0 +1,14 @@
+# Operators to generate charts for.
+# Each entry must exactly match an op name in bench_results.xml.
+operators:
+  - name: gqa
+    charts:
+      - type: trend
+        metrics:
+          - tileops_latency_ms
+          - tileops_tflops
+          - baseline_ratio
+      - type: bar_comparison
+        metrics:
+          - tileops_latency_ms
+          - baseline_latency_ms

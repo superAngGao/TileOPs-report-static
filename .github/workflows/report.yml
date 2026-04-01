@@ -35,7 +35,7 @@ jobs:
           python-version: "3.11"
 
       - name: Install Python dependencies
-        run: pip install anthropic
+        run: pip install anthropic matplotlib pyyaml numpy
 
       # ── Find target nightly run ─────────────────────────────────────────
 
@@ -174,6 +174,48 @@ jobs:
             --date           "${{ steps.prep.outputs.date }}" \
             --commit         "${{ steps.prep.outputs.sha }}" \
             --output         "${{ steps.prep.outputs.report_dir }}/nightly_data.json"
+
+      # ── Performance history & charts (gh-data branch) ──────────────
+
+      - name: Checkout gh-data branch
+        if: steps.dedup.outputs.skip != 'true'
+        run: |
+          git clone --depth 1 --branch gh-data \
+            "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" \
+            _gh_data 2>/dev/null \
+            || { mkdir -p _gh_data && echo '{"runs":[]}' > _gh_data/perf_history.json && echo "(gh-data branch not found, starting fresh)"; }
+
+      - name: Update perf history
+        if: steps.dedup.outputs.skip != 'true'
+        run: |
+          python scripts/update_perf_history.py \
+            --nightly-data "${{ steps.prep.outputs.report_dir }}/nightly_data.json" \
+            --perf-history _gh_data/perf_history.json
+
+      - name: Generate charts
+        if: steps.dedup.outputs.skip != 'true'
+        run: |
+          python scripts/generate_charts.py \
+            --config       scripts/chart_config.yaml \
+            --perf-history _gh_data/perf_history.json \
+            --nightly-data "${{ steps.prep.outputs.report_dir }}/nightly_data.json" \
+            --output-dir   "${{ steps.prep.outputs.report_dir }}/charts"
+
+      - name: Push perf history to gh-data
+        if: steps.dedup.outputs.skip != 'true'
+        run: |
+          cd _gh_data
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add perf_history.json
+          if git diff --staged --quiet; then
+            echo "perf_history.json unchanged."
+          else
+            git commit -m "data: update perf_history (${{ steps.prep.outputs.date }})"
+            git push origin gh-data
+          fi
+
+      # ── Analysis & report generation ───────────────────────────────
 
       - name: Analyze with Claude
         if: steps.dedup.outputs.skip != 'true'
