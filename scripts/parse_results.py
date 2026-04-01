@@ -237,6 +237,25 @@ def parse_bench_xml(path: str) -> dict:
             if key in props:
                 config[key] = props[key]
 
+        # Extract tag-prefixed baseline fields ({tag}_latency_ms, etc.)
+        # These are written by upstream conftest for all baselines beyond the first.
+        _TAG_SUFFIXES = ("_latency_ms", "_tflops", "_ratio")
+        seen_tags = set()
+        for pname, pval in props.items():
+            for suffix in _TAG_SUFFIXES:
+                if pname.endswith(suffix):
+                    tag = pname[:-len(suffix)]
+                    if tag in ("tileops", "baseline"):
+                        break  # already handled above
+                    try:
+                        config[pname] = float(pval)
+                    except ValueError:
+                        pass
+                    seen_tags.add(tag)
+                    break
+        if seen_tags:
+            config["baseline_tags"] = sorted(seen_tags)
+
         ops[op_name]["configs"].append(config)
 
     return {"total_configs": total_configs, "ops": ops, "failures": failures}

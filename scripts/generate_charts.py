@@ -138,12 +138,38 @@ def _short_config_name(name: str) -> str:
     return "_".join(parts[-3:]) if len(parts) > 3 else name
 
 
+def _collect_baselines(cfg: dict) -> list[tuple[str, float]]:
+    """Collect all baseline (tag, latency_ms) pairs from a config entry.
+
+    Includes the primary baseline_tag and any tag-prefixed baselines.
+    """
+    baselines = []
+    # Primary baseline
+    primary_tag = cfg.get("baseline_tag")
+    primary_ms = cfg.get("baseline_latency_ms")
+    seen_tags = set()
+    if primary_tag and primary_ms is not None:
+        baselines.append((primary_tag, primary_ms))
+        seen_tags.add(primary_tag)
+
+    # Tag-prefixed baselines from baseline_tags list
+    for tag in cfg.get("baseline_tags", []):
+        if tag in seen_tags:
+            continue
+        ms = cfg.get(f"{tag}_latency_ms")
+        if ms is not None:
+            baselines.append((tag, ms))
+            seen_tags.add(tag)
+
+    return baselines
+
+
 def generate_bar_comparison(op_name: str, metrics: list[str],
                             nightly: dict, output_dir: Path) -> list[Path]:
-    """Generate subplot bar chart: one subplot per config, tileops vs baseline.
+    """Generate subplot bar chart: one subplot per config, tileops vs all baselines.
 
     Each config gets its own subplot so different latency scales don't squash
-    smaller values.  Baseline bars are colored by baseline_tag.
+    smaller values.  Each baseline gets its own colored bar.
     """
     bench = nightly.get("bench", {})
     op_data = bench.get("ops", {}).get(op_name, {})
@@ -151,17 +177,18 @@ def generate_bar_comparison(op_name: str, metrics: list[str],
     if not configs:
         return []
 
-    # Keep configs that have both tileops and baseline latency
-    valid = [c for c in configs
-             if c.get("tileops_latency_ms") is not None
-             and c.get("baseline_latency_ms") is not None]
+    # Keep configs that have tileops latency and at least one baseline
+    valid = []
+    for c in configs:
+        if c.get("tileops_latency_ms") is not None and _collect_baselines(c):
+            valid.append(c)
     if not valid:
         return []
 
-    # Assign a color to each unique baseline_tag
-    tags = sorted({c.get("baseline_tag", "baseline") for c in valid})
+    # Collect all unique baseline tags across configs for consistent coloring
+    all_tags = sorted({tag for c in valid for tag, _ in _collect_baselines(c)})
     tag_color = {tag: _BASELINE_TAG_COLORS[i % len(_BASELINE_TAG_COLORS)]
-                 for i, tag in enumerate(tags)}
+                 for i, tag in enumerate(all_tags)}
 
     # Layout: up to 4 columns
     n = len(valid)
@@ -169,7 +196,7 @@ def generate_bar_comparison(op_name: str, metrics: list[str],
     nrows = (n + ncols - 1) // ncols
 
     fig, axes = plt.subplots(nrows, ncols,
-                             figsize=(4 * ncols, 3.5 * nrows),
+                             figsize=(4.5 * ncols, 3.5 * nrows),
                              squeeze=False)
 
     for idx, cfg in enumerate(valid):
@@ -177,17 +204,15 @@ def generate_bar_comparison(op_name: str, metrics: list[str],
         ax = axes[row][col]
 
         tileops_ms = cfg["tileops_latency_ms"]
-        baseline_ms = cfg["baseline_latency_ms"]
-        tag = cfg.get("baseline_tag", "baseline")
+        baselines = _collect_baselines(cfg)
 
-        bars = ax.bar(
-            [0, 1],
-            [tileops_ms, baseline_ms],
-            color=[_TILEOPS_COLOR, tag_color[tag]],
-            width=0.6,
-        )
-        ax.set_xticks([0, 1])
-        ax.set_xticklabels(["TileOPs", tag], fontsize=8)
+        labels = ["TileOPs"] + [tag for tag, _ in baselines]
+        values = [tileops_ms] + [ms for _, ms in baselines]
+        colors = [_TILEOPS_COLOR] + [tag_color[tag] for tag, _ in baselines]
+
+        bars = ax.bar(range(len(labels)), values, color=colors, width=0.6)
+        ax.set_xticks(range(len(labels)))
+        ax.set_xticklabels(labels, fontsize=7, rotation=30, ha="right")
         ax.set_title(_short_config_name(cfg["name"]), fontsize=8)
         ax.set_ylabel("ms", fontsize=8)
         ax.tick_params(axis="y", labelsize=7)

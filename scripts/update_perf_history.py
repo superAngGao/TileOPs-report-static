@@ -42,6 +42,15 @@ def extract_run(nightly: dict) -> dict:
             for key in _KEEP_FIELDS:
                 if key in cfg:
                     entry[key] = cfg[key]
+            # Also keep tag-prefixed baseline fields ({tag}_latency_ms, etc.)
+            _TAG_SUFFIXES = ("_latency_ms", "_tflops", "_ratio")
+            for ckey, cval in cfg.items():
+                if any(ckey.endswith(s) for s in _TAG_SUFFIXES):
+                    tag = ckey.rsplit("_", 2)[0] if ckey.count("_") >= 2 else None
+                    if tag and tag not in ("tileops", "baseline"):
+                        entry[ckey] = cval
+            if "baseline_tags" in cfg:
+                entry["baseline_tags"] = cfg["baseline_tags"]
             if entry:
                 configs[cfg_name] = entry
         if configs:
