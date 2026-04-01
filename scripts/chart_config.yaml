@@ -1,7 +1,7 @@
 # Operators to generate charts for.
 # Each entry must exactly match an op name in bench_results.xml.
 operators:
-  - name: gqa
+  - name: GroupQueryAttentionFwdOp
     charts:
       - type: trend
         metrics:
