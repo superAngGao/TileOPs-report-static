@@ -22,17 +22,19 @@ that schedule fit Hopper better.
 
 Before the mechanism sections, it helps to see the end-to-end outcome. The same
 milestone path was measured on several production-prefill shapes against FA3 on
-the same GPU.
+the same GPU. For the final causal row, we now report the best available anchor
+strategy per shape: either the original paired anchor or the newer single-tile
+outer-scheduler variant.
 
-| Shape | Base ms | Reorder ms | Anchor ms | FA3 ms | Anchor / FA3 ms | Anchor TFLOPS | FA3 TFLOPS | Anchor / FA3 TF |
-| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| llama8b-4k | 0.3165 | 0.3099 | 0.2630 | 0.2758 | 95.3% | 522.6 | 498.3 | 104.9% |
-| llama8b-8k | 1.0321 | 0.9938 | 0.9132 | 0.8371 | 109.1% | 602.0 | 656.7 | 91.7% |
-| llama8b-32k | 17.0063 | 16.2642 | 15.4076 | 12.9126 | 119.3% | 570.9 | 681.2 | 83.8% |
-| llama8b-128k | 273.6086 | 267.2308 | 259.1798 | 216.1482 | 119.9% | 543.0 | 651.1 | 83.4% |
-| llama8b-256k | 1130.9110 | 1081.5928 | 1037.6312 | 873.7935 | 118.8% | 542.5 | 644.3 | 84.2% |
-| llama70b-4k | 0.5636 | 0.5575 | 0.4863 | 0.4680 | 103.9% | 565.2 | 587.3 | 96.2% |
-| llama405b-4k | 1.0463 | 1.0164 | 0.9440 | 0.8598 | 109.8% | 582.4 | 639.4 | 91.1% |
+| Shape | Base ms | Reorder ms | Best Anchor ms | Anchor Variant | FA3 ms | Best Anchor / FA3 ms | Best Anchor TFLOPS | FA3 TFLOPS | Best Anchor / FA3 TF |
+| --- | ---: | ---: | ---: | :-- | ---: | ---: | ---: | ---: | ---: |
+| llama8b-4k | 0.3165 | 0.3099 | 0.2665 | paired | 0.2758 | 96.6% | 515.8 | 498.3 | 103.5% |
+| llama8b-8k | 1.0321 | 0.9938 | 0.9151 | paired | 0.8371 | 109.3% | 600.7 | 656.7 | 91.5% |
+| llama8b-32k | 17.0063 | 16.2642 | 14.3983 | single-tile | 12.9126 | 111.5% | 610.9 | 681.2 | 89.7% |
+| llama8b-128k | 273.6086 | 267.2308 | 254.9966 | paired | 216.1482 | 118.0% | 551.9 | 651.1 | 84.8% |
+| llama8b-256k | 1130.9110 | 1081.5928 | 1033.3350 | paired | 873.7935 | 118.3% | 544.8 | 644.3 | 84.5% |
+| llama70b-4k | 0.5636 | 0.5575 | 0.4863 | paired | 0.4680 | 103.9% | 565.2 | 587.3 | 96.2% |
+| llama405b-4k | 1.0463 | 1.0164 | 0.9440 | paired | 0.8598 | 109.8% | 582.4 | 639.4 | 91.1% |
 
 Three front-door readings matter:
 
@@ -41,6 +43,12 @@ Three front-door readings matter:
 - The first WS milestone is the dominant structural step-change.
 - At longer contexts, the path still helps materially, but it does not fully
   close the remaining gap to FA3.
+
+The `Best Anchor` column is intentionally dispatch-oriented. For the
+`llama8b` causal rows, it takes the better of the paired and single-tile
+anchor strategies from a follow-up paired-vs-single sweep; for the larger-model
+`4k` rows, only the paired anchor has been measured so far, so `Best Anchor`
+remains the paired result there.
 
 The `llama8b-256k` row was added in a follow-up run under the same measurement
 setup as the rest of the table.
@@ -227,7 +235,71 @@ separate regions with different live values and different accumulator pressure.
 In WS kernels, heavy old-state repair work should stay away from the current hot
 path whenever possible.
 
-## 6. Failed Directions And Constraints
+## 6. A Causal-Specific Scheduler Choice: Paired Vs Single-Tile
+
+The three-step mainline above explains how the final anchor kernel emerged, but
+it does not fully explain the remaining long-sequence gap to FA3. That gap led
+to one more causal-specific question: should the outer scheduler continue to use
+the current paired causal work unit, or should it switch to a single-tile work
+unit that more closely matches FA3's causal scheduler?
+
+This is a causal-specific design choice because pairing is not arbitrary. The
+current anchor kernel uses a paired outer work unit `(k, M-1-k)` to flatten the
+causal triangle imbalance: each outer work item mixes one light tile from the
+top of the triangle with one heavy tile from the bottom. That is a sensible
+local balancing strategy, especially at short sequence lengths. But it also
+makes the outer scheduler coarser. FA3 does not use this paired work unit. Its
+causal scheduler issues single tiles, then relies on reverse-`m_block`
+ordering, query-head-space sectioning, and dynamic persistent issuance to
+recover load balance and locality.
+
+To separate these two strategies, we built a single-tile outer-scheduler
+variant that keeps the inner anchor compute body largely unchanged while
+removing pairing from the outer work unit. The result is not a new mainline
+kernel yet, but it is already useful as a design probe.
+
+| Shape | Paired Anchor ms | Single-Tile ms | Single / Paired |
+| --- | ---: | ---: | ---: |
+| llama8b-4k | 0.2665 | 0.3428 | 128.6% |
+| llama8b-8k | 0.9151 | 1.0156 | 111.0% |
+| llama8b-16k | 3.4973 | 3.4788 | 99.5% |
+| llama8b-32k | 15.2967 | 14.3983 | 94.1% |
+| llama8b-64k | 61.8354 | 60.4092 | 97.7% |
+| llama8b-128k | 254.9966 | 256.7521 | 100.7% |
+| llama8b-256k | 1033.3350 | 1034.1890 | 100.1% |
+
+This table shows a clear crossover shape. Pairing is the right outer strategy
+for small shapes, where the extra scheduler freedom of single-tile does not pay
+for itself. Around `16k`, the two become nearly identical. At `32k-64k`,
+single-tile becomes meaningfully better. And by `128k-256k`, the single-tile
+outer scheduler remains competitive but does not yet deliver a decisive
+end-to-end win on its own.
+
+The Nsight Compute data makes that last point more precise. At `64k`, `128k`,
+and `256k`, the single-tile outer scheduler consistently produces a more
+FA3-like memory-system signature:
+
+- lower L2 miss rate
+- lower or comparable DRAM read
+- higher total L2 bytes
+
+So single-tile is not a dead end. It really does release some scheduler freedom
+and improve cache behavior. But it is also not a complete explanation by
+itself. In this report, that result is best read as a new causal-specific
+design lesson rather than as a replacement for the earlier three-step story:
+
+- pairing is still the right outer strategy for short contexts
+- single-tile becomes the more interesting outer strategy once context grows
+- but closing the residual long-sequence gap still requires more than just
+  changing scheduler granularity
+
+This also suggests a practical dispatch intuition for future kernels. A
+conservative policy would keep paired scheduling below `32k` and only consider
+single-tile outer scheduling at `32k+`. An exploratory policy could already
+treat `16k` as a crossover region worth benchmarking, while still keeping
+paired scheduling as the safer default there.
+
+## 7. Failed Directions And Constraints
 
 Several side paths were useful precisely because they did not become the main
 explanation.
