@@ -215,27 +215,7 @@ spills and injected waits. Delayed rescale pays more in the launch-side
 `QK/PV` windows, but it makes the downstream hot window much cleaner, and that
 trade is favorable for end-to-end throughput.
 
-## 5. What The Evolution Path Teaches
-
-Taken together, the path is not one long blur of tuning. It has a clean
-structure:
-
-- `Single-CTA -> Baseline WS`: schedule / information-flow win
-- `Baseline WS -> Reorder`: memory-system / locality win
-- `Reorder -> Delayed Rescale`: register-flow win
-
-That decomposition gives each milestone a different role. First, make the
-producer / consumer schedule explicit. Then reduce the memory-system footprint
-of that schedule. Finally, clean up the register and accumulator flow inside the
-consumer hot window.
-
-The practical design lesson from the final step is not "add more waits." It is
-"use waits as stage boundaries." `wait1` and `wait0` are useful because they
-separate regions with different live values and different accumulator pressure.
-In WS kernels, heavy old-state repair work should stay away from the current hot
-path whenever possible.
-
-## 6. A Causal-Specific Scheduler Choice: Paired Vs Single-Tile
+## 5. A Causal-Specific Scheduler Choice: Paired Vs Single-Tile
 
 The three-step mainline above explains how the final anchor kernel emerged, but
 it does not fully explain the remaining long-sequence gap to FA3. That gap led
@@ -257,6 +237,15 @@ To separate these two strategies, we built a single-tile outer-scheduler
 variant that keeps the inner anchor compute body largely unchanged while
 removing pairing from the outer work unit. The result is not a new mainline
 kernel yet, but it is already useful as a design probe.
+
+![Paired vs single-tile scheduler](figures/pair_vs_single_scheduler_strategy.png)
+
+The schematic above uses a small causal example to show the difference in
+grouping and traversal. The paired strategy binds one light tile and one heavy
+tile into the same outer work item, while the single-tile strategy lets the
+outer scheduler issue one tile at a time in reverse `m_block` order. Both still
+operate inside the same query-head section, but they expose very different
+scheduler granularity to the outer policy.
 
 | Shape | Paired Anchor ms | Single-Tile ms | Single / Paired |
 | --- | ---: | ---: | ---: |
@@ -298,6 +287,42 @@ conservative policy would keep paired scheduling below `32k` and only consider
 single-tile outer scheduling at `32k+`. An exploratory policy could already
 treat `16k` as a crossover region worth benchmarking, while still keeping
 paired scheduling as the safer default there.
+
+## 6. What The Evolution Path Teaches
+
+Taken together, the path is not one long blur of tuning. It now has a cleaner
+structure than before:
+
+- `Single-CTA -> Baseline WS`: schedule / information-flow win
+- `Baseline WS -> Reorder`: memory-system / locality win
+- `Reorder -> Delayed Rescale`: register-flow win
+- `Paired -> Single-Tile (causal outer scheduler choice)`: scheduler-granularity tradeoff
+
+That decomposition gives each step a distinct role. First, make the producer /
+consumer schedule explicit. Then reduce the memory-system footprint of that
+schedule. Then clean up the register and accumulator flow inside the consumer
+hot window. Finally, for causal kernels, choose the right outer scheduling
+granularity for the target sequence-length regime.
+
+This last point slightly refines the earlier summary. The three-step mainline is
+still the right explanation for how the anchor kernel itself emerged. But the
+follow-up paired-vs-single experiment shows that causal scheduling has one more
+important degree of freedom above that mainline: whether the outer scheduler
+should balance work by pairing `(k, M-1-k)` tiles, or recover FA3-like
+single-tile freedom and let the policy react more directly to sequence length.
+
+The practical design lesson from the delayed-rescale step remains the same. It
+is not "add more waits." It is "use waits as stage boundaries." `wait1` and
+`wait0` are useful because they separate regions with different live values and
+different accumulator pressure. In WS kernels, heavy old-state repair work
+should stay away from the current hot path whenever possible.
+
+The practical design lesson from the new causal scheduler result is complementary:
+
+- paired scheduling is still the better short-context strategy
+- single-tile scheduling becomes more attractive once context grows
+- scheduler granularity should therefore be treated as a dispatch decision, not
+  as one fixed causal-kernel law
 
 ## 7. Failed Directions And Constraints
 
