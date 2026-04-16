@@ -223,6 +223,7 @@ where the final kernel is already near FA3 and where a meaningful gap remains.
 | llama8b-8k | 1.0321 | 0.9938 | 0.9132 | 0.8371 | 109.1% | 602.0 | 656.7 | 91.7% |
 | llama8b-32k | 17.0063 | 16.2642 | 15.4076 | 12.9126 | 119.3% | 570.9 | 681.2 | 83.8% |
 | llama8b-128k | 273.6086 | 267.2308 | 259.1798 | 216.1482 | 119.9% | 543.0 | 651.1 | 83.4% |
+| llama8b-256k | 1130.9110 | 1081.5928 | 1037.6312 | 873.7935 | 118.8% | 542.5 | 644.3 | 84.2% |
 | llama70b-4k | 0.5636 | 0.5575 | 0.4863 | 0.4680 | 103.9% | 565.2 | 587.3 | 96.2% |
 | llama405b-4k | 1.0463 | 1.0164 | 0.9440 | 0.8598 | 109.8% | 582.4 | 639.4 | 91.1% |
 
@@ -233,6 +234,9 @@ Two quick readings are enough for this appendix:
 - At longer contexts, the schedule, memory-system, and register-flow
   improvements from this report still matter, but they do not fully close the
   remaining throughput gap to FA3.
+
+The `llama8b-256k` row was added in a follow-up run under the same measurement
+setup as the rest of the appendix.
 
 ## Summary
 
