@@ -47,6 +47,13 @@ consumer warp groups. That change borrows the same class of information-flow
 idea emphasized by FlashAttention-3: decouple data movement from Tensor Core
 issue, then keep the consumers in a stable ping-pong rhythm.
 
+Relative to the single-CTA baseline, this step makes three concrete structural
+changes. `K/V` movement is pulled into a dedicated producer warp group, the
+consumer body is split into `WG1` and `WG2` with explicit handoff between them,
+and the kernel adopts the persistent WS execution style used by the later
+milestones. So this is not a local cleanup inside one loop body; it is a change
+in who does the work and how that work is phased.
+
 ![Baseline WS schematic](figures/ws_two_wg_schematic.png)
 
 ![Three-kernel full cycle](figures/ws_three_kernel_full_cycle.png)
@@ -70,6 +77,13 @@ steady-state split, the core windows barely move:
 - `qk_issue`: `198 -> 200`
 - `pv_issue`: `215 -> 216`
 - `softmax_core`: `1309 -> 1313`
+
+That is consistent with the actual source-level change. Reorder keeps the same
+`1 producer + 2 consumers` WS skeleton and nearly the same consumer core body.
+What changes is the traversal order of the persistent kernel: the work becomes
+more `KV`-head-friendly, so neighboring iterations reuse a more similar `K/V`
+working set. This is why the memory-system footprint improves even though the
+local arithmetic windows look almost unchanged.
 
 Yet total measured time still improves from `2919` cycles to `2841` cycles.
 That makes a pure "better local compute schedule" explanation too weak. The
@@ -102,6 +116,13 @@ become much larger:
 
 - `qk_issue`: `200 -> 1066`
 - `pv_issue`: `216 -> 941`
+
+Here the exact code motion is the key fact. In `reorder`, the old output path
+still performs `rescale(acc_o)` before `PV`. In the delayed-rescale variant,
+that work is removed from the `pre-PV` region and moved to after `wait0`. The
+full anchor kernel keeps that same post-`wait0` placement and layers its own
+wait-placement cleanup on top, but the isolated delayed-rescale-only result
+shows that the rescale move is already the dominant source-level change.
 
 But the kernel still gets faster overall:
 
