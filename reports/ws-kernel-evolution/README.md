@@ -1,6 +1,15 @@
 # WS Kernel Evolution: From Schedule Redesign To Hardware-Facing Refinements
 
-This report summarizes one kernel evolution path for causal GQA on Hopper:
+## Introduction
+
+This report asks how a Hopper causal GQA forward kernel moved from a
+single-CTA WGMMA pipeline to a warp-specialized WS kernel that recovers most of
+the practical gap to FA3, while still leaving a visible long-context gap that
+can be explained rather than hand-waved away.
+
+The main point is that this evolution path is not one long blur of tuning. It
+contains one foundational schedule redesign and then two smaller
+hardware-facing refinements:
 
 1. `Single-CTA WGMMA Pipeline -> Baseline WS Pipeline` is a schedule win.
 2. `Baseline WS Pipeline -> KV-Locality Reorder` is a memory-system win.
@@ -8,6 +17,33 @@ This report summarizes one kernel evolution path for causal GQA on Hopper:
 
 The short version is simple: first we fixed the information flow, then we made
 that schedule fit Hopper better.
+
+## End-To-End Results Vs FA3
+
+Before the mechanism sections, it helps to see the end-to-end outcome. The same
+milestone path was measured on several production-prefill shapes against FA3 on
+the same GPU.
+
+| Shape | Base ms | Reorder ms | Anchor ms | FA3 ms | Anchor / FA3 ms | Anchor TFLOPS | FA3 TFLOPS | Anchor / FA3 TF |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| llama8b-4k | 0.3165 | 0.3099 | 0.2630 | 0.2758 | 95.3% | 522.6 | 498.3 | 104.9% |
+| llama8b-8k | 1.0321 | 0.9938 | 0.9132 | 0.8371 | 109.1% | 602.0 | 656.7 | 91.7% |
+| llama8b-32k | 17.0063 | 16.2642 | 15.4076 | 12.9126 | 119.3% | 570.9 | 681.2 | 83.8% |
+| llama8b-128k | 273.6086 | 267.2308 | 259.1798 | 216.1482 | 119.9% | 543.0 | 651.1 | 83.4% |
+| llama8b-256k | 1130.9110 | 1081.5928 | 1037.6312 | 873.7935 | 118.8% | 542.5 | 644.3 | 84.2% |
+| llama70b-4k | 0.5636 | 0.5575 | 0.4863 | 0.4680 | 103.9% | 565.2 | 587.3 | 96.2% |
+| llama405b-4k | 1.0463 | 1.0164 | 0.9440 | 0.8598 | 109.8% | 582.4 | 639.4 | 91.1% |
+
+Three front-door readings matter:
+
+- At `4k`, the final anchor-style kernel is already close to FA3, and on
+  `llama8b-4k` it is slightly faster in elapsed time on this measurement set.
+- The first WS milestone is the dominant structural step-change.
+- At longer contexts, the path still helps materially, but it does not fully
+  close the remaining gap to FA3.
+
+The `llama8b-256k` row was added in a follow-up run under the same measurement
+setup as the rest of the table.
 
 ## Setup
 
@@ -209,34 +245,6 @@ explanation.
   pre-WS kernel still hits a TileLang/TVM `WgmmaSyncRewriter` crash in this
   environment, so the pre-WS node has coarse timing but not the same internal
   split as the WS milestones.
-
-## 7. Appendix: Production Shapes Vs FA3
-
-The discussion above focuses on one canonical causal analysis point, but the
-same milestone path was also measured on several production-prefill shapes
-against FA3 on the same GPU. This table is meant as a scope check: it shows
-where the final kernel is already near FA3 and where a meaningful gap remains.
-
-| Shape | Base ms | Reorder ms | Anchor ms | FA3 ms | Anchor / FA3 ms | Anchor TFLOPS | FA3 TFLOPS | Anchor / FA3 TF |
-| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| llama8b-4k | 0.3165 | 0.3099 | 0.2630 | 0.2758 | 95.3% | 522.6 | 498.3 | 104.9% |
-| llama8b-8k | 1.0321 | 0.9938 | 0.9132 | 0.8371 | 109.1% | 602.0 | 656.7 | 91.7% |
-| llama8b-32k | 17.0063 | 16.2642 | 15.4076 | 12.9126 | 119.3% | 570.9 | 681.2 | 83.8% |
-| llama8b-128k | 273.6086 | 267.2308 | 259.1798 | 216.1482 | 119.9% | 543.0 | 651.1 | 83.4% |
-| llama8b-256k | 1130.9110 | 1081.5928 | 1037.6312 | 873.7935 | 118.8% | 542.5 | 644.3 | 84.2% |
-| llama70b-4k | 0.5636 | 0.5575 | 0.4863 | 0.4680 | 103.9% | 565.2 | 587.3 | 96.2% |
-| llama405b-4k | 1.0463 | 1.0164 | 0.9440 | 0.8598 | 109.8% | 582.4 | 639.4 | 91.1% |
-
-Two quick readings are enough for this appendix:
-
-- At `4k`, the final kernel is already close to FA3, and on `llama8b-4k` it is
-  slightly faster in elapsed time on this measurement set.
-- At longer contexts, the schedule, memory-system, and register-flow
-  improvements from this report still matter, but they do not fully close the
-  remaining throughput gap to FA3.
-
-The `llama8b-256k` row was added in a follow-up run under the same measurement
-setup as the rest of the appendix.
 
 ## Summary
 
