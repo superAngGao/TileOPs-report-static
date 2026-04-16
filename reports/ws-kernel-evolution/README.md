@@ -219,7 +219,6 @@ where the final kernel is already near FA3 and where a meaningful gap remains.
 
 | Shape | Base ms | Reorder ms | Anchor ms | FA3 ms | Anchor / FA3 ms | Anchor TFLOPS | FA3 TFLOPS | Anchor / FA3 TF |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| llama8b-1k | 0.0696 | 0.0719 | n/a | 0.1184 | n/a | n/a | 72.6 | n/a |
 | llama8b-4k | 0.3165 | 0.3099 | 0.2630 | 0.2758 | 95.3% | 522.6 | 498.3 | 104.9% |
 | llama8b-8k | 1.0321 | 0.9938 | 0.9132 | 0.8371 | 109.1% | 602.0 | 656.7 | 91.7% |
 | llama8b-32k | 17.0063 | 16.2642 | 15.4076 | 12.9126 | 119.3% | 570.9 | 681.2 | 83.8% |
@@ -234,9 +233,6 @@ Two quick readings are enough for this appendix:
 - At longer contexts, the schedule, memory-system, and register-flow
   improvements from this report still matter, but they do not fully close the
   remaining throughput gap to FA3.
-
-`anchor_causal` is intentionally marked `n/a` on `llama8b-1k` because that
-configuration does not satisfy `total_pairs >= NUM_SMS` in this setup.
 
 ## Summary
 
