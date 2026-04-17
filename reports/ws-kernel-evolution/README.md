@@ -9,36 +9,41 @@ throughout modern prefill and decode workloads. Because GQA sits directly on
 the critical path of end-to-end latency, its kernel efficiency matters not only
 for isolated microbenchmarks but for practical AI systems.
 
-At the same time, optimizing GQA well on Hopper is unusually difficult.
-Hopper exposes a powerful but highly specific warp-specialized (WS) programming
-regime built around warpgroup-level tensor-core execution, explicit
-producer-consumer orchestration, and tight interaction among `TMA`, `WGMMA`,
-shared memory, and register allocation. These mechanisms create large
-performance opportunities, but they also make kernel behavior much more
-sensitive to schedule shape, locality policy, synchronization placement, and
-compiler-lowered register flow than in more conventional CTA-level designs.
+Algorithm papers usually explain these kernels primarily through the lens of
+computation and scheduling principles. That perspective is necessary, but it is
+not sufficient to obtain a near-SOTA operator in practice. Once the target is a
+real Hopper implementation, the remaining gap is no longer purely algorithmic:
+it also depends on how the schedule interacts with the hardware execution
+model, how the compiler lowers that schedule into concrete tensor-core code,
+and how the workload itself exposes or limits optimization freedom.
 
-This makes Hopper GQA optimization a particularly interesting systems problem.
-The challenge is not only to map the attention equations onto tensor cores, but
-to construct a WS execution schedule that matches the causal workload, feeds the
-hardware efficiently, and avoids losing throughput to memory-system or register
-side effects. FlashAttention-3 (FA3) provides the most important prior point of
-reference here: its Hopper results show that high-performance attention depends
-on a carefully designed warp-specialized schedule rather than on arithmetic
-formulation alone. However, reproducing that level of performance inside a
-different operator stack still requires turning those high-level ideas into a
-concrete kernel design and then understanding which remaining gaps come from
-which hardware-facing causes.
+Hopper makes this gap especially visible. Its warp-specialized (WS)
+programming regime is powerful but highly specific, built around warpgroup-level
+tensor-core execution, explicit producer-consumer orchestration, and tight
+interaction among `TMA`, `WGMMA`, shared memory, and register allocation.
+These mechanisms create large performance opportunities, but they also make
+kernel behavior much more sensitive to schedule shape, locality policy,
+synchronization placement, compiler-lowered register flow, and workload
+structure than in more conventional CTA-level designs.
 
-This report studies that problem in the `TileOPs` operator library, using
-`TileLang` as the kernel construction framework. Following the design direction
-suggested by FA3, we first build a Hopper warp-specialized GQA forward kernel
-in TileOPs. We then go beyond the initial WS schedule and show that the next
-stage of optimization is unlocked by the causal workload itself: because causal
-attention leaves real freedom in traversal and handoff order, it exposes a
-schedule space that can be used to improve both `L2` behavior and register
-usage. Starting from that observation, this report develops a systematic
-optimization path with three layers:
+FlashAttention-3 (FA3) is the key prior reference point in this setting. FA3
+shows that high-performance Hopper attention is not achieved by arithmetic
+formulation alone; it also depends on a carefully designed warp-specialized
+schedule. However, taking that algorithmic direction and turning it into a
+different high-performance operator stack still requires substantial systems
+work. The core problem is therefore not just to "use the FA3 idea", but to
+close the engineering gap between an algorithmic recipe and a practically
+efficient kernel.
+
+This report studies that gap in the `TileOPs` operator library, using
+`TileLang` as the kernel construction framework. Starting from the design
+direction suggested by FA3, we build a Hopper warp-specialized GQA forward
+kernel in TileOps and then systematically close the remaining implementation
+gap through hardware-facing analysis. In particular, we show that the causal
+workload releases real schedule freedom, and that this freedom can be exploited
+to improve `L2` locality, register behavior, and overall tensor-core packing.
+Starting from that observation, this report develops a systematic optimization
+path with three layers:
 
 1. `Single-CTA WGMMA Pipeline -> Baseline WS Pipeline` is a schedule win.
 2. `Baseline WS Pipeline -> KV-Locality Reorder` is a memory-system win.
@@ -46,13 +51,14 @@ optimization path with three layers:
 
 The broader claim of this report is not limited to one kernel revision on one
 GPU. For compute-bound operators, especially those that depend strongly on
-tensor-core utilization, performance is often determined by how much schedule
-freedom can be extracted from the workload and then translated into
-hardware-compatible locality and register behavior. In that sense, the methods
-documented here are relevant beyond Hopper itself. They should also be useful
-for future tensor-core-dominated architectures, including platforms such as
-Blackwell, where the exact instructions may change but the need for coordinated
-schedule, memory, and register design remains.
+tensor-core utilization, near-SOTA performance often requires closing the gap
+between algorithm design and implementation reality. That means jointly
+reasoning about schedule freedom, hardware locality, compiler effects, and
+workload structure rather than treating them as separate concerns. In that
+sense, the methods documented here are relevant beyond Hopper itself. They
+should also be useful for future tensor-core-dominated architectures,
+including platforms such as Blackwell, where the exact instructions may change
+but the need for coordinated schedule, memory, and register design remains.
 
 ## End-To-End Results Vs FA3
 
