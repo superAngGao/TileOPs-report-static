@@ -78,7 +78,7 @@ is not meant to replace the later causal analysis; rather, it establishes the
 practical performance envelope that the rest of the report aims to explain. For
 the final causal entry, we report the best available anchor strategy per shape:
 either the original paired anchor or the newer single-tile outer-scheduler
-variant.
+variant. All rows in this table use batch-1 prefill measurements (`B=1`).
 
 | Shape | Baseline WS ms | Reorder ms | Best Anchor ms | Outer Scheduler | FA3 ms | Best Anchor TFLOPS | FA3 TFLOPS | Best Anchor / FA3 TFLOPS |
 | --- | ---: | ---: | ---: | :-- | ---: | ---: | ---: | ---: |
