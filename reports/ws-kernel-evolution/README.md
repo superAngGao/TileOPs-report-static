@@ -80,7 +80,7 @@ the final causal entry, we report the best available anchor strategy per shape:
 either the original paired anchor or the newer single-tile outer-scheduler
 variant.
 
-| Shape | Baseline WS ms | Reorder ms | Best Anchor ms | Anchor Variant | FA3 ms | Best Anchor TFLOPS | FA3 TFLOPS | Best Anchor / FA3 TFLOPS |
+| Shape | Baseline WS ms | Reorder ms | Best Anchor ms | Outer Scheduler | FA3 ms | Best Anchor TFLOPS | FA3 TFLOPS | Best Anchor / FA3 TFLOPS |
 | --- | ---: | ---: | ---: | :-- | ---: | ---: | ---: | ---: |
 | llama8b-4k | 0.3165 | 0.3099 | 0.2665 | paired | 0.2758 | 515.8 | 498.3 | 103.5% |
 | llama8b-8k | 1.0321 | 0.9938 | 0.9151 | paired | 0.8371 | 600.7 | 656.7 | 91.5% |
