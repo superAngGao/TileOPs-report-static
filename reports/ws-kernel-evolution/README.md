@@ -318,7 +318,7 @@ working set. In other words, this step does not replace the warp-specialized
 schedule from Section 2; it changes the visitation order and memory footprint
 of that same schedule.
 
-![Baseline WS traversal vs reorder traversal](figures/reorder_traversal_schematic.svg)
+![Baseline WS traversal vs reorder traversal](figures/reorder_traversal_schematic_v2.svg)
 
 *Figure 3. `KV-Locality Reorder` keeps the same warp-specialized
 producer-consumer schedule but changes the outer traversal order. The key
