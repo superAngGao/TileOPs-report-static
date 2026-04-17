@@ -99,8 +99,8 @@
   <line x1="1076" y1="418" x2="1092" y2="418" stroke="#4a5a67" stroke-width="3.2" marker-end="url(#arrow)"/>
   <line x1="1136" y1="454" x2="1136" y2="494" stroke="#4a5a67" stroke-width="3.2" marker-end="url(#arrow)"/>
   <line x1="1092" y1="530" x2="1076" y2="530" stroke="#4a5a67" stroke-width="3.2" marker-end="url(#arrow)"/>
-  <line x1="972" y1="530" x2="956" y2="530" stroke="#4a5a67" stroke-width="3.2" marker-end="url(#arrow)"/>
-  <line x1="852" y1="530" x2="836" y2="530" stroke="#4a5a67" stroke-width="3.2" marker-end="url(#arrow)"/>
+  <line x1="988" y1="530" x2="972" y2="530" stroke="#4a5a67" stroke-width="3.2" marker-end="url(#arrow)"/>
+  <line x1="884" y1="530" x2="868" y2="530" stroke="#4a5a67" stroke-width="3.2" marker-end="url(#arrow)"/>
   <text x="780" y="625" class="body">Consecutive visits stay closer to the same KV group,</text>
   <text x="780" y="651" class="body">reducing L2 lookups and reshaping overall read traffic.</text>
 
