@@ -2,51 +2,93 @@
 
 ## Introduction
 
-This report asks how a Hopper causal GQA forward kernel moved from a
-single-CTA WGMMA pipeline to a warp-specialized WS kernel that recovers most of
-the practical gap to FA3, while still leaving a visible long-context gap that
-can be explained rather than hand-waved away.
+Grouped Query Attention (GQA) is now a central building block in large language
+model inference. It reduces the `K/V` footprint relative to full multi-head
+attention, improves serving efficiency at long context, and therefore appears
+throughout modern prefill and decode workloads. Because GQA sits directly on
+the critical path of end-to-end latency, its kernel efficiency matters not only
+for isolated microbenchmarks but for practical AI systems.
 
-The main point is that this evolution path is not one long blur of tuning. It
-contains one foundational schedule redesign and then two smaller
-hardware-facing refinements:
+At the same time, optimizing GQA well on Hopper is unusually difficult.
+Hopper exposes a powerful but highly specific warp-specialized (WS) programming
+regime built around warpgroup-level tensor-core execution, explicit
+producer-consumer orchestration, and tight interaction among `TMA`, `WGMMA`,
+shared memory, and register allocation. These mechanisms create large
+performance opportunities, but they also make kernel behavior much more
+sensitive to schedule shape, locality policy, synchronization placement, and
+compiler-lowered register flow than in more conventional CTA-level designs.
+
+This makes Hopper GQA optimization a particularly interesting systems problem.
+The challenge is not only to map the attention equations onto tensor cores, but
+to construct a WS execution schedule that matches the causal workload, feeds the
+hardware efficiently, and avoids losing throughput to memory-system or register
+side effects. FlashAttention-3 (FA3) provides the most important prior point of
+reference here: its Hopper results show that high-performance attention depends
+on a carefully designed warp-specialized schedule rather than on arithmetic
+formulation alone. However, reproducing that level of performance inside a
+different operator stack still requires turning those high-level ideas into a
+concrete kernel design and then understanding which remaining gaps come from
+which hardware-facing causes.
+
+This report studies that problem in the `TileOPs` operator library, using
+`TileLang` as the kernel construction framework. Following the design direction
+suggested by FA3, we first build a Hopper warp-specialized GQA forward kernel
+in TileOPs. We then go beyond the initial WS schedule and show that the next
+stage of optimization is unlocked by the causal workload itself: because causal
+attention leaves real freedom in traversal and handoff order, it exposes a
+schedule space that can be used to improve both `L2` behavior and register
+usage. Starting from that observation, this report develops a systematic
+optimization path with three layers:
 
 1. `Single-CTA WGMMA Pipeline -> Baseline WS Pipeline` is a schedule win.
 2. `Baseline WS Pipeline -> KV-Locality Reorder` is a memory-system win.
 3. `KV-Locality Reorder -> Post-wait0 Delayed Rescale` is a register-flow win.
 
-The short version is simple: first we fixed the information flow, then we made
-that schedule fit Hopper better.
+The broader claim of this report is not limited to one kernel revision on one
+GPU. For compute-bound operators, especially those that depend strongly on
+tensor-core utilization, performance is often determined by how much schedule
+freedom can be extracted from the workload and then translated into
+hardware-compatible locality and register behavior. In that sense, the methods
+documented here are relevant beyond Hopper itself. They should also be useful
+for future tensor-core-dominated architectures, including platforms such as
+Blackwell, where the exact instructions may change but the need for coordinated
+schedule, memory, and register design remains.
 
 ## End-To-End Results Vs FA3
 
-Before the mechanism sections, it helps to see the end-to-end outcome. The same
-milestone path was measured on several production-prefill shapes against FA3 on
-the same GPU. For the final causal row, we now report the best available anchor
-strategy per shape: either the original paired anchor or the newer single-tile
-outer-scheduler variant.
+Before analyzing mechanisms, we first summarize the end-to-end outcome on a set
+of production-prefill shapes measured against FA3 on the same GPU. This table
+is not meant to replace the later causal analysis; rather, it establishes the
+practical performance envelope that the rest of the report aims to explain. For
+the final causal entry, we report the best available anchor strategy per shape:
+either the original paired anchor or the newer single-tile outer-scheduler
+variant.
 
-| Shape | Base ms | Reorder ms | Best Anchor ms | Anchor Variant | FA3 ms | Best Anchor / FA3 ms | Best Anchor TFLOPS | FA3 TFLOPS | Best Anchor / FA3 TF |
-| --- | ---: | ---: | ---: | :-- | ---: | ---: | ---: | ---: | ---: |
-| llama8b-4k | 0.3165 | 0.3099 | 0.2665 | paired | 0.2758 | 96.6% | 515.8 | 498.3 | 103.5% |
-| llama8b-8k | 1.0321 | 0.9938 | 0.9151 | paired | 0.8371 | 109.3% | 600.7 | 656.7 | 91.5% |
-| llama8b-32k | 17.0063 | 16.2642 | 14.3983 | single-tile | 12.9126 | 111.5% | 610.9 | 681.2 | 89.7% |
-| llama8b-128k | 273.6086 | 267.2308 | 254.9966 | paired | 216.1482 | 118.0% | 551.9 | 651.1 | 84.8% |
-| llama8b-256k | 1130.9110 | 1081.5928 | 1033.3350 | paired | 873.7935 | 118.3% | 544.8 | 644.3 | 84.5% |
-| llama70b-4k | 0.5636 | 0.5575 | 0.4863 | paired | 0.4680 | 103.9% | 565.2 | 587.3 | 96.2% |
-| llama405b-4k | 1.0463 | 1.0164 | 0.9440 | paired | 0.8598 | 109.8% | 582.4 | 639.4 | 91.1% |
+| Shape | Base ms | Reorder ms | Best Anchor ms | Anchor Variant | FA3 ms | Best Anchor TFLOPS | FA3 TFLOPS | Best Anchor / FA3 TF |
+| --- | ---: | ---: | ---: | :-- | ---: | ---: | ---: | ---: |
+| llama8b-4k | 0.3165 | 0.3099 | 0.2665 | paired | 0.2758 | 515.8 | 498.3 | 103.5% |
+| llama8b-8k | 1.0321 | 0.9938 | 0.9151 | paired | 0.8371 | 600.7 | 656.7 | 91.5% |
+| llama8b-32k | 17.0063 | 16.2642 | 14.3983 | single-tile | 12.9126 | 610.9 | 681.2 | 89.7% |
+| llama8b-128k | 273.6086 | 267.2308 | 254.9966 | paired | 216.1482 | 551.9 | 651.1 | 84.8% |
+| llama8b-256k | 1130.9110 | 1081.5928 | 1033.3350 | paired | 873.7935 | 544.8 | 644.3 | 84.5% |
+| llama70b-4k | 0.5636 | 0.5575 | 0.4863 | paired | 0.4680 | 565.2 | 587.3 | 96.2% |
+| llama405b-4k | 1.0463 | 1.0164 | 0.9440 | paired | 0.8598 | 582.4 | 639.4 | 91.1% |
 
-Three front-door readings matter:
+Several observations are immediate.
 
 - At `4k`, the final anchor-style kernel is already close to FA3, and on
   `llama8b-4k` it is slightly faster in elapsed time on this measurement set.
-- The first WS milestone is the dominant structural step-change.
+- The first WS milestone is the dominant structural step-change. Later
+  milestones matter, but they build on top of a new execution organization
+  rather than rescuing an already-good kernel.
 - At longer contexts, the path still helps materially, but it does not fully
-  close the remaining gap to FA3.
+  close the remaining gap to FA3. That is exactly why the later sections
+  separate schedule, memory-system, and register-flow effects instead of
+  treating them as one undifferentiated story.
 
 The `Best Anchor` column is intentionally dispatch-oriented. For the
 `llama8b` causal rows, it takes the better of the paired and single-tile
-anchor strategies from a follow-up paired-vs-single sweep; for the larger-model
+anchor strategies from a follow-up paired-vs-single sweep. For the larger-model
 `4k` rows, only the paired anchor has been measured so far, so `Best Anchor`
 remains the paired result there.
 
@@ -55,9 +97,18 @@ setup as the rest of the table.
 
 ## Setup
 
-The main mechanistic discussion uses one representative causal analysis point:
-`B=4, S=4096, H=64, Hkv=8, D=128`. We compare milestones under the same GPU and
-measurement discipline, and we use multiple evidence types together:
+We evaluate the evolution path on one representative causal analysis point,
+`B=4, S=4096, H=64, Hkv=8, D=128`, and we also track end-to-end prefill
+performance on production-aligned shapes. All milestone comparisons are taken
+on the same GPU and under the same environment so that schedule effects,
+locality effects, and codegen effects can be compared directly rather than
+through anecdotal profiler screenshots.
+
+The production-prefill sweep already indicates the overall trend, but the core
+goal of this report is explanatory rather than merely comparative.
+
+The measurement discipline matters for the later mechanistic argument. We use
+multiple evidence types together:
 
 - end-to-end latency
 - cycle-level timeline splits
@@ -70,37 +121,57 @@ That combination matters because it lets us separate "does less work" from
 
 ## 1. Single-CTA Baseline
 
-The pre-WS kernel is already Hopper-oriented: it uses WGMMA and software
-pipelining, so it is a meaningful baseline rather than a strawman. Its core
-limitation is structural. One CTA still owns the entire local loop over `K/V`
-tiles, so data movement, softmax-side work, and Tensor Core issue remain tied
-to one CTA-local execution path.
+The pre-WS baseline for this study is the existing Hopper-oriented single-CTA
+WGMMA pipeline, which we refer to as the `Single-CTA WGMMA Pipeline`. This
+baseline already uses WGMMA and software pipelining, so it should be viewed as
+a competent predecessor rather than as an artificially weak comparison point.
+
+Its structural limitation is that one CTA still owns the entire local loop over
+`K/V` tiles. There is no explicit producer warp group, no consumer handoff, and
+no stable two-consumer ping-pong. As a result, Tensor Core activity is gated by
+the progress of one CTA-local execution path.
 
 ![Single-CTA baseline](figures/pre_pr871_schematic.png)
 
-This is why the pre-WS kernel should not be described with the same vocabulary
-as the later WS kernels. The later kernels are about explicit producer /
-consumer handoff; the baseline is still a single-CTA software pipeline with
-only local overlap across loop iterations.
+This distinction matters for the interpretation of the entire report. The later
+milestones are organized around explicit producer / consumer handoff between
+specialized warp groups, whereas the pre-WS baseline is better understood as a
+single-CTA software pipeline with only local overlap across loop iterations.
+Accordingly, it serves as the correct reference point for identifying which
+benefits come specifically from warp specialization.
 
 ## 2. Baseline WS As A Schedule Win
 
-The first large gain comes from changing the execution organization itself.
-`Baseline WS Pipeline` splits the CTA into one producer warp group and two
-consumer warp groups. That change borrows the same class of information-flow
-idea emphasized by FlashAttention-3: decouple data movement from Tensor Core
-issue, then keep the consumers in a stable ping-pong rhythm.
+The first major gain comes from replacing the single-CTA structure with an
+explicit warp-specialized schedule. This `Baseline WS Pipeline` is the primary
+structural transition in the optimization path. It is not best understood as an
+instruction-level cleanup; rather, it changes how data movement is assigned,
+how consumption is partitioned, and how Tensor Core work is phased across the
+CTA.
 
-Relative to the single-CTA baseline, this step makes three concrete structural
-changes. `K/V` movement is pulled into a dedicated producer warp group, the
-consumer body is split into `WG1` and `WG2` with explicit handoff between them,
-and the kernel adopts the persistent WS execution style used by the later
-milestones. So this is not a local cleanup inside one loop body; it is a change
-in who does the work and how that work is phased.
+Concretely, the baseline WS milestone introduces three structural changes
+relative to the single-CTA baseline. First, `K/V` movement is pulled into a
+dedicated producer warp group instead of remaining fused with the consumer
+body. Second, the consumer path is split into two warp groups, `WG1` and
+`WG2`, with an explicit scheduler handoff between them so that one consumer can
+release the next while the producer is already feeding future buffers. Third,
+the kernel switches to the persistent WS execution style used in this study, so
+the same resident CTA keeps stepping through macro-tiles instead of rebuilding
+the local pipeline around a single CTA-owned loop body every time. Those are
+visible execution-model changes, not local cleanups inside an otherwise
+unchanged loop.
 
 ![Baseline WS schematic](figures/ws_two_wg_schematic.png)
 
 ![Three-kernel full cycle](figures/ws_three_kernel_full_cycle.png)
+
+At a high level, the schedule adopts the same class of information-flow idea
+emphasized by FlashAttention-3: one producer warp group feeds `K/V`, while two
+consumer warp groups alternate their Tensor Core work. That split matters
+because it decouples data movement from Tensor Core issue. In the pre-WS
+kernel, those responsibilities remain chained behind one CTA-local loop. In the
+WS kernel, they are explicitly staged and handed off between specialized warp
+groups.
 
 The strongest evidence that this is a schedule win is that the Tensor Core work
 does not materially change, but its packing does. Across the pre-WS and
@@ -112,6 +183,11 @@ This also matches the size of the end-to-end gain. The first WS milestone
 delivers about `30% ~ 41%` lower latency across the production-aligned prefill
 shapes we tracked. That is much easier to explain as an architectural schedule
 change than as a small local cleanup.
+
+The claim should still be phrased carefully. The point is not that this kernel
+reproduces FA3 in a strict one-to-one sense. The more precise statement is that
+it adopts the same class of information-flow organization: explicit warp
+specialization, explicit staging, and tighter Tensor Core packing.
 
 ## 3. Reorder As A Memory-System Win
 
