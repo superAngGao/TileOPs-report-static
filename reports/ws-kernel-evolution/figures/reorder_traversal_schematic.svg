@@ -5,7 +5,7 @@
       .panel-title { font: 700 26px Arial, sans-serif; fill: #16202a; }
       .label { font: 600 19px Arial, sans-serif; fill: #2d3a45; }
       .body { font: 18px Arial, sans-serif; fill: #36424d; }
-      .small { font: 16px Arial, sans-serif; fill: #54616d; }
+      .small { font: 700 16px Arial, sans-serif; fill: #495661; }
       .tiletext { font: 700 20px Arial, sans-serif; fill: #16202a; }
       .sched { font: 700 18px Arial, sans-serif; fill: #16202a; }
     </style>
@@ -104,6 +104,6 @@
   <text x="780" y="625" class="body">Consecutive visits stay closer to the same KV group,</text>
   <text x="780" y="651" class="body">reducing L2 lookups and reshaping overall read traffic.</text>
 
-  <rect x="90" y="736" width="1220" height="52" rx="14" fill="#f2eee5" stroke="#d8d1c4" stroke-width="1.5"/>
-  <text x="120" y="768" class="small">Colored tiles denote different KV working sets. The producer / WG1 / WG2 skeleton is unchanged in both panels.</text>
+  <rect x="90" y="748" width="1220" height="54" rx="14" fill="#f2eee5" stroke="#d8d1c4" stroke-width="1.5"/>
+  <text x="120" y="781" class="small">Colored tiles denote different KV working sets. The producer / WG1 / WG2 skeleton is unchanged in both panels.</text>
 </svg>
