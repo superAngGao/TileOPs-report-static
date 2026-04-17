@@ -273,6 +273,13 @@ working set. In other words, this step does not replace the warp-specialized
 schedule from Section 2; it changes the visitation order and memory footprint
 of that same schedule.
 
+![Baseline WS traversal vs reorder traversal](figures/reorder_traversal_schematic.svg)
+
+*Figure 3. `KV-Locality Reorder` keeps the same warp-specialized
+producer-consumer schedule but changes the outer traversal order. The key
+effect is that neighboring iterations touch a more similar `K/V` working set
+than in the baseline WS traversal.*
+
 Yet total measured time still improves from `2919` cycles to `2841` cycles.
 That makes a pure "better local compute schedule" explanation too weak. The
 improvement is better explained as a memory-system change.
@@ -335,7 +342,7 @@ anchor's `1030`, and total time improves from `2841` to `2716`.
 
 ![Milestone stitched timelines](figures/milestone_stitched_timelines.png)
 
-*Figure 3. Timeline comparison across milestones. In the anchor section, this
+*Figure 4. Timeline comparison across milestones. In the anchor section, this
 figure highlights which hot windows are actually reshaped by the final
 register-flow cleanup on top of the earlier WS and locality improvements.*
 
@@ -365,12 +372,12 @@ trade is favorable for end-to-end throughput.
 
 ![Three-kernel full cycle](figures/ws_three_kernel_full_cycle.png)
 
-*Figure 4. Full-cycle view of the final warp-specialized schedule family. In
+*Figure 5. Full-cycle view of the final warp-specialized schedule family. In
 this context, the figure should be read as showing how the reorder and anchor
 improvements affect the overall execution rhythm on top of the same WS
 foundation, rather than as the initial definition of warp specialization.*
 
-Figure 4 complements Figure 3 by moving from local hot windows to whole-cycle
+Figure 5 complements Figure 4 by moving from local hot windows to whole-cycle
 behavior. The stitched timelines explain where the anchor kernel cleans up the
 critical steady-state path. The full-cycle view shows the broader consequence:
 once those local hazards are reduced, the overall producer-consumer schedule
