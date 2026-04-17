@@ -111,6 +111,12 @@ remains the paired result there.
 The `llama8b-256k` row was added in a follow-up run under the same measurement
 setup as the rest of the table.
 
+![Milestone stitched timelines](figures/milestone_stitched_timelines.png)
+
+*Figure 3. Overview of the measured milestone path. The later sections analyze
+this evolution in layers: schedule design, locality refinement, register-flow
+refinement, and workload-aware issue scheduling above the tile level.*
+
 ## Setup
 
 We evaluate the evolution path on one representative causal analysis point,
@@ -289,12 +295,6 @@ So the better description is not "lower miss-rate win." It is a
 memory-system-facing traffic-shaping win: reorder reduces how much read traffic
 the WS schedule generates, even if the remaining stream does not have a lower
 miss ratio.
-
-![Milestone stitched timelines](figures/milestone_stitched_timelines.png)
-
-*Figure 4. Timeline context across milestones. The reorder step should be read
-as a locality-oriented refinement on top of the same baseline WS schedule,
-rather than as a different producer-consumer execution model.*
 
 This step is important because it narrows the remaining search space. Once the
 schedule is structurally sound and the memory-system footprint is smaller, the
