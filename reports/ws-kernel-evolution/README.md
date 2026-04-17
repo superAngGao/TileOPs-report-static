@@ -259,6 +259,15 @@ the kernel still uses the same `1 producer + 2 consumers` organization and the
 same FA3-aligned steady-state execution model. What changes here is how that
 schedule traverses the workload above the tile level.
 
+More concretely, the original `PR871 base` kernel uses the earlier persistent
+ordering, where neighboring outer work items can move across different query
+groups and therefore across different `KV` heads. The reorder variant changes
+that outer traversal into a `KV`-head-friendly persistent order: work is
+grouped by batch and `KV` head first, and the GQA query-head groups that share
+the same `KV` head are processed in sequence. So the compute body stays almost
+the same, but the persistent loop stops bouncing as aggressively between
+unrelated `K/V` working sets.
+
 In the local steady-state split, the core windows barely move:
 
 - `qk_issue`: `198 -> 200`
@@ -280,6 +289,13 @@ producer-consumer schedule but changes the outer traversal order. The key
 effect is that neighboring iterations touch a more similar `K/V` working set
 than in the baseline WS traversal.*
 
+The relevant `L2` property is temporal reuse under limited cache capacity.
+Hopper's `L2` does not need every lookup to have a lower miss ratio in order to
+help; it is already useful if the kernel revisits the same `K/V` footprint
+before those lines are displaced. By keeping all query groups that share one
+`KV` head closer together in time, reorder gives the cache a better chance to
+retain those `K/V` lines across neighboring persistent iterations.
+
 Yet total measured time still improves from `2919` cycles to `2841` cycles.
 That makes a pure "better local compute schedule" explanation too weak. The
 improvement is better explained as a memory-system change.
@@ -296,6 +312,14 @@ So the better description is not "lower miss-rate win." It is a
 memory-system-facing traffic-shaping win: reorder reduces how much read traffic
 the WS schedule generates, even if the remaining stream does not have a lower
 miss ratio.
+
+That is also the concrete measured effect. Relative to `PR871 base`, reorder
+reduces total `L2` read lookups from `656k` to `388k`, reduces absolute `L2`
+read misses from `53.0k` to `44.5k`, reduces DRAM read bytes from `8.04M` to
+`7.00M`, and improves the measured total from `2919` to `2841` cycles. So the
+best current reading is: reorder works by making the WS schedule consume a
+smaller and more locality-friendly `K/V` access stream, not by changing the
+local arithmetic body or by naively improving miss rate alone.
 
 This step is important because it narrows the remaining search space. Once the
 schedule is structurally sound and the memory-system footprint is smaller, the
