@@ -111,12 +111,6 @@ remains the paired result there.
 The `llama8b-256k` row was added in a follow-up run under the same measurement
 setup as the rest of the table.
 
-![Milestone stitched timelines](figures/milestone_stitched_timelines.png)
-
-*Figure 3. Overview of the measured milestone path. The later sections analyze
-this evolution in layers: schedule design, locality refinement, register-flow
-refinement, and workload-aware issue scheduling above the tile level.*
-
 ## Setup
 
 We evaluate the evolution path on one representative causal analysis point,
@@ -208,9 +202,15 @@ point, the second consumer warp group becomes eligible to issue the next
 compute slice, so the CTA can maintain a producer-consumer-consumer rhythm
 instead of forcing all phases through one CTA-local path.
 
+![Three-kernel full cycle](figures/ws_three_kernel_full_cycle.png)
+
+*Figure 2. Full-cycle view of the baseline warp-specialized schedule. The CTA
+progresses through fill, steady state, and drain while maintaining the same
+producer-plus-two-consumer execution structure.*
+
 ![Baseline WS schematic](figures/ws_two_wg_schematic.png)
 
-*Figure 2. Steady-state execution model of the `Baseline WS Pipeline`. One
+*Figure 3. Steady-state execution model of the `Baseline WS Pipeline`. One
 producer warp group stages future `K/V` tiles while two consumer warp groups
 alternate tensor-core work through an explicit handoff protocol.*
 
@@ -226,8 +226,10 @@ kernel, data movement and tensor-core issue remain chained behind one CTA-local
 loop. In the WS kernel, they are explicitly staged and handed off between
 specialized warp groups.
 
-Figure 2 should be read specifically as the schedule definition that aligns our
-baseline WS kernel with the FA3-style execution model. The producer is
+Figure 2 provides the global view of the FA3-aligned schedule: the kernel is no
+longer a single CTA-local software pipeline, but a warp-specialized execution
+pattern that persists across fill, steady state, and drain. Figure 3 then zooms
+in on the steady-state regime. The producer is
 responsible only for preparing future tiles, while `WG1` and `WG2` alternate as
 consumers on the current stream of work. That division is the key schedule
 change in this section. The later locality and anchor optimizations do not
@@ -295,6 +297,13 @@ So the better description is not "lower miss-rate win." It is a
 memory-system-facing traffic-shaping win: reorder reduces how much read traffic
 the WS schedule generates, even if the remaining stream does not have a lower
 miss ratio.
+
+![Milestone stitched timelines](figures/milestone_stitched_timelines.png)
+
+*Figure 4. Timeline comparison across milestones. In this section, the reorder
+milestone should be interpreted as a locality-oriented refinement layered on top
+of the same baseline WS schedule, rather than as a different producer-consumer
+execution model.*
 
 This step is important because it narrows the remaining search space. Once the
 schedule is structurally sound and the memory-system footprint is smaller, the
