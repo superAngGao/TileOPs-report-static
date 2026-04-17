@@ -194,23 +194,55 @@ the local pipeline around a single CTA-owned loop body every time. Those are
 visible execution-model changes, not local cleanups inside an otherwise
 unchanged loop.
 
+At the level of one steady-state cycle, the execution order is now different
+from the single-CTA baseline. The producer warp group stages the next `K/V`
+tile into shared memory while one consumer warp group issues `QK` / `PV`
+tensor-core work on the current tile. When that consumer reaches its handoff
+point, the second consumer warp group becomes eligible to issue the next
+compute slice, so the CTA can maintain a producer-consumer-consumer rhythm
+instead of forcing all phases through one CTA-local path.
+
 ![Baseline WS schematic](figures/ws_two_wg_schematic.png)
+
+*Figure 2. Steady-state execution model of the `Baseline WS Pipeline`. One
+producer warp group stages future `K/V` tiles while two consumer warp groups
+alternate tensor-core work through an explicit handoff protocol.*
 
 ![Three-kernel full cycle](figures/ws_three_kernel_full_cycle.png)
 
+*Figure 3. Full-cycle view of the baseline warp-specialized pipeline, including
+fill, steady state, and drain phases.*
+
 At a high level, the schedule adopts the same class of information-flow idea
-emphasized by FlashAttention-3: one producer warp group feeds `K/V`, while two
-consumer warp groups alternate their Tensor Core work. That split matters
-because it decouples data movement from Tensor Core issue. In the pre-WS
-kernel, those responsibilities remain chained behind one CTA-local loop. In the
-WS kernel, they are explicitly staged and handed off between specialized warp
-groups.
+emphasized by the [FlashAttention-3 paper](https://tridao.me/publications/flash3/flash3.pdf):
+one producer warp group feeds `K/V`, while two consumer warp groups alternate
+their Tensor Core work. FA3 uses this warp-specialized producer-consumer design
+to exploit Hopper asynchrony: `TMA`-based data movement can proceed in the
+producer while consumers issue asynchronous `WGMMA`, and the consumer-side
+organization creates room to overlap GEMM and softmax-side work more
+effectively. That split matters here for the same reason. In the pre-WS
+kernel, data movement and tensor-core issue remain chained behind one CTA-local
+loop. In the WS kernel, they are explicitly staged and handed off between
+specialized warp groups.
+
+Figures 2 and 3 should be read with that overlap story in mind. Figure 2 shows
+the steady-state regime: the producer is responsible only for preparing future
+tiles, while `WG1` and `WG2` alternate as consumers on the current stream of
+work. Figure 3 then expands that steady-state picture into the full lifecycle
+of the CTA, making clear that the benefit is not only a shorter local phase but
+a more continuous execution rhythm across fill, steady state, and drain.
 
 The strongest evidence that this is a schedule win is that the Tensor Core work
 does not materially change, but its packing does. Across the pre-WS and
 baseline-WS milestones, GMMA work is essentially unchanged, yet tensor-pipe
 utilization rises from `35.2%` to `60.0%`. The kernel is not doing less Tensor
 Core math; it is feeding and phasing the same math more effectively.
+
+This interpretation is also consistent with the FA3 ablation story. The FA3
+paper reports that removing warp specialization or removing GEMM-softmax
+pipelining each materially reduces throughput on Hopper, which reinforces the
+same qualitative point made by our measurements: carefully structured overlap,
+rather than reduced arithmetic, is what drives the efficiency gain.
 
 This also matches the size of the end-to-end gain. The first WS milestone
 delivers about `30% ~ 41%` lower latency across the production-aligned prefill
