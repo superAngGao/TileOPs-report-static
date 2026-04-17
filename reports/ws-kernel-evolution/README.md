@@ -601,10 +601,13 @@ The practical design lesson from the new causal scheduler result is complementar
 - scheduler granularity should therefore be treated as a dispatch decision, not
   as one fixed causal-kernel law
 
-## 7. Failed Directions And Constraints
+## 7. Appendix: Explored Directions With Limited Impact
 
-Several side paths were useful precisely because they did not become the main
-explanation.
+Several side paths were still worth recording even though they did not become
+the main explanation for the final kernel. They helped narrow the design space,
+rule out tempting but incomplete stories, and clarify which constraints were
+methodological rather than algorithmic. We collect them here as appendix-style
+notes rather than as part of the mainline optimization path.
 
 - More aggressive overlap variants helped map the design space, but the winning
   story was not "more overlap at any cost." The gains were better explained by
