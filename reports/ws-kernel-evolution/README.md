@@ -565,7 +565,7 @@ single-tile outer scheduling at `32k+`. An exploratory policy could already
 treat `16k` as a crossover region worth benchmarking, while still keeping
 paired scheduling as the safer default there.
 
-## 6. What The Evolution Path Teaches
+## 6. Conclusion: What The Evolution Path Teaches
 
 Taken together, the path is not one long blur of tuning. It now has a cleaner
 structure than before:
