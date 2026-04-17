@@ -118,7 +118,10 @@ We evaluate the evolution path on one representative causal analysis point,
 performance on production-aligned shapes. All milestone comparisons are taken
 on the same GPU and under the same environment so that schedule effects,
 locality effects, and codegen effects can be compared directly rather than
-through anecdotal profiler screenshots.
+through anecdotal profiler screenshots. The hardware target throughout this
+report is `NVIDIA H200`, which provides the Hopper execution model discussed in
+the introduction and also explains the later use of `V2P_NUM_SMS=132` for the
+persistent-kernel measurements.
 
 The production-prefill sweep already indicates the overall trend, but the core
 goal of this report is explanatory rather than merely comparative.
