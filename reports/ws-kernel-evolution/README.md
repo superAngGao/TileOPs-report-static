@@ -41,23 +41,23 @@ This report studies that gap in the `TileOPs` operator library, using
 `TileLang` as the kernel construction framework. Starting from the design
 direction suggested by FA3, we build a Hopper warp-specialized GQA forward
 kernel in TileOps and then systematically close the remaining implementation
-gap through hardware-facing analysis. In particular, we show that the causal
-workload releases real schedule freedom, and that this freedom can be exploited
-to improve `L2` locality, register behavior, and overall tensor-core packing.
-Starting from that observation, this report develops a systematic optimization
-path with three layers:
+gap through hardware-facing analysis. Starting from that FA3-inspired
+warp-specialized direction, this report develops a systematic optimization path
+with three main layers:
 
 1. `Single-CTA WGMMA Pipeline -> Baseline WS Pipeline` is a schedule win.
 2. `Baseline WS Pipeline -> KV-Locality Reorder` is a memory-system win.
 3. `KV-Locality Reorder -> Post-wait0 Delayed Rescale` is a register-flow win.
 
-Beyond this three-step mainline, the report also studies a workload-aware
-issue-scheduling problem above the tile level. For causal GQA, the workload
-structure leaves nontrivial freedom in how outer work items are issued,
-grouped, and ordered. We use the paired-vs-single-tile comparison as a
-concrete probe of this issue-schedule design space, and as a way to explain
-which part of the remaining long-sequence gap to FA3 is really coming from
-outer scheduling rather than from the intra-tile compute body itself.
+Beyond this three-step mainline, the report also studies a separate
+workload-aware issue-scheduling problem above the tile level. For causal GQA,
+the workload structure leaves nontrivial freedom in how outer work items are
+issued, grouped, and ordered. We treat this as an additional schedule-design
+dimension rather than as a fourth step in the kernel mainline, and use the
+paired-vs-single-tile comparison as a concrete probe of that design space. This
+lets us separate which part of the remaining long-sequence gap to FA3 is really
+coming from outer scheduling rather than from the intra-tile compute body
+itself.
 
 The broader claim of this report is not limited to one kernel revision on one
 GPU. For compute-bound operators, especially those that depend strongly on
@@ -80,7 +80,7 @@ the final causal entry, we report the best available anchor strategy per shape:
 either the original paired anchor or the newer single-tile outer-scheduler
 variant.
 
-| Shape | Base ms | Reorder ms | Best Anchor ms | Anchor Variant | FA3 ms | Best Anchor TFLOPS | FA3 TFLOPS | Best Anchor / FA3 TF |
+| Shape | Baseline WS ms | Reorder ms | Best Anchor ms | Anchor Variant | FA3 ms | Best Anchor TFLOPS | FA3 TFLOPS | Best Anchor / FA3 TF |
 | --- | ---: | ---: | ---: | :-- | ---: | ---: | ---: | ---: |
 | llama8b-4k | 0.3165 | 0.3099 | 0.2665 | paired | 0.2758 | 515.8 | 498.3 | 103.5% |
 | llama8b-8k | 1.0321 | 0.9938 | 0.9151 | paired | 0.8371 | 600.7 | 656.7 | 91.5% |
@@ -532,14 +532,14 @@ inside each work item versus finer-grained reverse-block issuance.
 | llama8b-128k | 254.9966 | 256.7521 | 100.7% |
 | llama8b-256k | 1033.3350 | 1034.1890 | 100.1% |
 
-This table shows a clear crossover shape. Pairing is the right outer strategy
-for small shapes, where the causal imbalance is modest enough that the coarse
-but well-balanced paired work unit wins. Around `16k`, the two become nearly
-identical. At `32k-64k`, single-tile becomes meaningfully better, which is
-consistent with the idea that long-sequence causal tails benefit from finer
-outer issue control. And by `128k-256k`, the single-tile outer scheduler
-remains competitive but does not yet deliver a decisive end-to-end win on its
-own.
+This table shows a real crossover region rather than one monotonic switch
+point. Pairing is the right outer strategy for small shapes, where the causal
+imbalance is modest enough that the coarse but well-balanced paired work unit
+wins. Around `16k`, the two become nearly identical. At `32k-64k`, single-tile
+becomes meaningfully better, which is consistent with the idea that
+long-sequence causal tails benefit from finer outer issue control. By
+`128k-256k`, the single-tile outer scheduler remains competitive but no longer
+holds a decisive end-to-end advantage on its own.
 
 The Nsight Compute data makes that last point more precise. At `64k`, `128k`,
 and `256k`, the single-tile outer scheduler consistently produces a more
@@ -559,11 +559,12 @@ design lesson rather than as a replacement for the earlier three-step story:
 - but closing the residual long-sequence gap still requires more than just
   changing scheduler granularity
 
-This also suggests a practical dispatch intuition for future kernels. A
-conservative policy would keep paired scheduling below `32k` and only consider
-single-tile outer scheduling at `32k+`. An exploratory policy could already
-treat `16k` as a crossover region worth benchmarking, while still keeping
-paired scheduling as the safer default there.
+This also suggests a practical dispatch intuition for future kernels. The
+current data supports treating outer scheduler granularity as a workload-aware
+policy choice, not as one fixed causal default. In practice, paired scheduling
+is still the safer short-context policy, while the `16k-64k` range is already a
+useful region for benchmarking single-tile outer scheduling as an alternative
+that may recover more FA3-like issue freedom.
 
 ## 6. Conclusion: What The Evolution Path Teaches
 
@@ -573,20 +574,22 @@ structure than before:
 - `Single-CTA -> Baseline WS`: schedule / information-flow win
 - `Baseline WS -> Reorder`: memory-system / locality win
 - `Reorder -> Delayed Rescale`: register-flow win
-- `Paired -> Single-Tile (causal outer scheduler choice)`: scheduler-granularity tradeoff
+- causal outer issue scheduling: an additional tile-level schedule-design freedom
 
 That decomposition gives each step a distinct role. First, make the producer /
 consumer schedule explicit. Then reduce the memory-system footprint of that
 schedule. Then clean up the register and accumulator flow inside the consumer
-hot window. Finally, for causal kernels, choose the right outer scheduling
-granularity for the target sequence-length regime.
+hot window. Separately, for causal kernels, analyze the workload structure above
+the tile and choose the outer issue scheduling policy that best matches the
+target sequence-length regime.
 
-This last point slightly refines the earlier summary. The three-step mainline is
-still the right explanation for how the anchor kernel itself emerged. But the
-follow-up paired-vs-single experiment shows that causal scheduling has one more
-important degree of freedom above that mainline: whether the outer scheduler
-should balance work by pairing `(k, M-1-k)` tiles, or recover FA3-like
-single-tile freedom and let the policy react more directly to sequence length.
+This last point slightly refines the earlier summary. The three-step mainline
+is still the right explanation for how the anchor kernel itself emerged. But
+the follow-up paired-vs-single experiment shows that causal scheduling exposes
+one more important degree of freedom above that mainline: how tiles should be
+grouped and issued once per-tile workload imbalance becomes large. In this
+report, that extra freedom is studied through the choice between paired
+`(k, M-1-k)` work units and FA3-like single-tile issuance.
 
 The practical design lesson from the delayed-rescale step remains the same. It
 is not "add more waits." It is "use waits as stage boundaries." `wait1` and
@@ -629,4 +632,7 @@ The central result is that this kernel evolution path contains one large
 schedule win followed by two hardware-facing refinements. Baseline WS wins by
 reorganizing information flow. Reorder wins by shrinking the memory-system
 footprint. Delayed rescale wins by moving heavy register and accumulator
-pressure out of the hottest consumer window.
+pressure out of the hottest consumer window. Beyond that three-step mainline,
+causal GQA also exposes an additional tile-level issue-scheduling degree of
+freedom, which should be analyzed through workload shape rather than treated as
+a fixed kernel law.
