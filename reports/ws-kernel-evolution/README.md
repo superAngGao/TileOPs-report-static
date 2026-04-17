@@ -51,6 +51,14 @@ path with three layers:
 2. `Baseline WS Pipeline -> KV-Locality Reorder` is a memory-system win.
 3. `KV-Locality Reorder -> Post-wait0 Delayed Rescale` is a register-flow win.
 
+Beyond this three-step mainline, the report also studies a workload-aware
+issue-scheduling problem above the tile level. For causal GQA, the workload
+structure leaves nontrivial freedom in how outer work items are issued,
+grouped, and ordered. We use the paired-vs-single-tile comparison as a
+concrete probe of this issue-schedule design space, and as a way to explain
+which part of the remaining long-sequence gap to FA3 is really coming from
+outer scheduling rather than from the intra-tile compute body itself.
+
 The broader claim of this report is not limited to one kernel revision on one
 GPU. For compute-bound operators, especially those that depend strongly on
 tensor-core utilization, near-SOTA performance often requires closing the gap
@@ -135,11 +143,28 @@ baseline already uses WGMMA and software pipelining, so it should be viewed as
 a competent predecessor rather than as an artificially weak comparison point.
 
 Its structural limitation is that one CTA still owns the entire local loop over
-`K/V` tiles. There is no explicit producer warp group, no consumer handoff, and
-no stable two-consumer ping-pong. As a result, Tensor Core activity is gated by
-the progress of one CTA-local execution path.
+`K/V` tiles. In each iteration of that loop, the same CTA is responsible for
+staging the next `K/V` tile, issuing the `QK` tensor-core work, updating the
+online softmax state, issuing the `PV` tensor-core work, and then advancing the
+pipeline to the next tile. The kernel may overlap adjacent iterations through
+software pipelining, but that overlap is still local to one CTA-controlled
+execution path. There is no explicit producer warp group, no consumer handoff,
+and no stable two-consumer ping-pong. As a result, Tensor Core activity is
+gated by the progress of one CTA-local schedule.
 
 ![Single-CTA baseline](figures/pre_pr871_schematic.png)
+
+*Figure 1. Execution model of the pre-WS `Single-CTA WGMMA Pipeline`. One CTA
+stages `K/V`, executes the `QK -> softmax -> PV` sequence, and advances the
+software pipeline across tiles without explicit warp-group specialization.*
+
+Figure 1 should be read exactly in that order. The left side represents one
+CTA-local pipeline rather than separate execution roles. The CTA first prepares
+the next tile's `K/V` state, then enters the `QK` compute phase, carries the
+intermediate values through the online softmax update, and finally issues the
+`PV` phase before moving on to the next loop iteration. Any overlap that exists
+comes from pipelining neighboring iterations of this single control path, not
+from handing work across specialized warp groups.
 
 This distinction matters for the interpretation of the entire report. The later
 milestones are organized around explicit producer / consumer handoff between
