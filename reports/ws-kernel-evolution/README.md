@@ -202,15 +202,9 @@ point, the second consumer warp group becomes eligible to issue the next
 compute slice, so the CTA can maintain a producer-consumer-consumer rhythm
 instead of forcing all phases through one CTA-local path.
 
-![Three-kernel full cycle](figures/ws_three_kernel_full_cycle.png)
-
-*Figure 2. Full-cycle view of the baseline warp-specialized schedule. The CTA
-progresses through fill, steady state, and drain while maintaining the same
-producer-plus-two-consumer execution structure.*
-
 ![Baseline WS schematic](figures/ws_two_wg_schematic.png)
 
-*Figure 3. Steady-state execution model of the `Baseline WS Pipeline`. One
+*Figure 2. Steady-state execution model of the `Baseline WS Pipeline`. One
 producer warp group stages future `K/V` tiles while two consumer warp groups
 alternate tensor-core work through an explicit handoff protocol.*
 
@@ -226,10 +220,8 @@ kernel, data movement and tensor-core issue remain chained behind one CTA-local
 loop. In the WS kernel, they are explicitly staged and handed off between
 specialized warp groups.
 
-Figure 2 provides the global view of the FA3-aligned schedule: the kernel is no
-longer a single CTA-local software pipeline, but a warp-specialized execution
-pattern that persists across fill, steady state, and drain. Figure 3 then zooms
-in on the steady-state regime. The producer is
+Figure 2 should be read as the steady-state definition of the FA3-aligned
+schedule. The producer is
 responsible only for preparing future tiles, while `WG1` and `WG2` alternate as
 consumers on the current stream of work. That division is the key schedule
 change in this section. The later locality and anchor optimizations do not
@@ -298,13 +290,6 @@ memory-system-facing traffic-shaping win: reorder reduces how much read traffic
 the WS schedule generates, even if the remaining stream does not have a lower
 miss ratio.
 
-![Milestone stitched timelines](figures/milestone_stitched_timelines.png)
-
-*Figure 4. Timeline comparison across milestones. In this section, the reorder
-milestone should be interpreted as a locality-oriented refinement layered on top
-of the same baseline WS schedule, rather than as a different producer-consumer
-execution model.*
-
 This step is important because it narrows the remaining search space. Once the
 schedule is structurally sound and the memory-system footprint is smaller, the
 last gap to the final kernel is no longer well explained by locality alone.
@@ -348,6 +333,12 @@ the rest of the anchor machinery, moving rescale alone already reproduces most
 of the final shape: `softmax_core` drops from `1313` to `1056`, close to
 anchor's `1030`, and total time improves from `2841` to `2716`.
 
+![Milestone stitched timelines](figures/milestone_stitched_timelines.png)
+
+*Figure 3. Timeline comparison across milestones. In the anchor section, this
+figure highlights which hot windows are actually reshaped by the final
+register-flow cleanup on top of the earlier WS and locality improvements.*
+
 The codegen evidence makes the mechanism concrete. At the generated CUDA level,
 the `QK` loops still look broadly similar across `reorder`,
 `delayed-rescale-only`, and `anchor`. But the generated SASS is very different:
@@ -371,6 +362,20 @@ appears to pay more in the downstream `wait1 / softmax-side` region through
 spills and injected waits. Delayed rescale pays more in the launch-side
 `QK/PV` windows, but it makes the downstream hot window much cleaner, and that
 trade is favorable for end-to-end throughput.
+
+![Three-kernel full cycle](figures/ws_three_kernel_full_cycle.png)
+
+*Figure 4. Full-cycle view of the final warp-specialized schedule family. In
+this context, the figure should be read as showing how the reorder and anchor
+improvements affect the overall execution rhythm on top of the same WS
+foundation, rather than as the initial definition of warp specialization.*
+
+Figure 4 complements Figure 3 by moving from local hot windows to whole-cycle
+behavior. The stitched timelines explain where the anchor kernel cleans up the
+critical steady-state path. The full-cycle view shows the broader consequence:
+once those local hazards are reduced, the overall producer-consumer schedule
+can sustain a cleaner rhythm across the entire macro-cycle, not just inside one
+isolated sub-window.
 
 ## 5. A Causal-Specific Scheduler Choice: Paired Vs Single-Tile
 
