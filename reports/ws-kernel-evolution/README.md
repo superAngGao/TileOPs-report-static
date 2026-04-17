@@ -123,8 +123,41 @@ through anecdotal profiler screenshots.
 The production-prefill sweep already indicates the overall trend, but the core
 goal of this report is explanatory rather than merely comparative.
 
-The measurement discipline matters for the later mechanistic argument. We use
-multiple evidence types together:
+The measurement discipline matters for the later mechanistic argument. End-to-
+end latency is measured in fresh worker subprocesses with identical input
+construction, `torch.cuda.Event` timing, `3` warmup iterations, and `7`
+measured iterations, with the reported number taken as the median elapsed time.
+Keeping each variant in its own subprocess avoids import and codegen pollution
+across different TileOps worktrees. The production sweep and the canonical
+`4k` comparison were both run serially on the same visible Hopper device
+(`CUDA_VISIBLE_DEVICES=1` in the manifest), with the same TileLang
+environment and the same `V2P_NUM_SMS=132` setting for the persistent kernels.
+
+Cycle-level timeline splits come from instrumented benchmark kernels that place
+inline `clock64` probes around specific steady-state regions such as `QK`
+issue, `PV` issue, `wait<1>`, `wait<0>`, softmax-side work, barrier waits, and
+scheduler handoff. Those probes accumulate per-region cycle deltas into timing
+buffers inside the kernel, which is why later figures can discuss local windows
+like `qk_issue`, `softmax_core`, or `wait_v_full` instead of relying only on
+whole-kernel runtime. The one exception is the pre-WS baseline: in this
+environment, fine-grained in-loop WGMMA timing still triggers a
+`WgmmaSyncRewriter` crash, so the pre-WS node is represented with coarse timing
+rather than with the same internal split used for the WS milestones.
+
+Nsight Compute is used in two separate roles. First, we collect tensor-pipe
+activity on the canonical `4k` shape, using
+`sm__pipe_tensor_cycles_active.avg.pct_of_peak_sustained_elapsed` and related
+GMMA counters to check whether milestones change the amount of tensor-core work
+or mainly change how well it is packed. Second, we collect L2-facing metrics
+such as read lookups, read misses, `lts__t_bytes`, and `dram__bytes_read` to
+test the locality claims in the reorder and long-sequence scheduler sections.
+These NCU runs are also kept serial, and they bracket exactly one profiled
+kernel invocation with `cudaProfilerStart/Stop` so that the reported counters
+are tied to one steady measurement window rather than to process startup noise.
+NCU temporary files are redirected under `.tmp/ncu` to keep the profiler runs
+stable across repeated sweeps.
+
+Taken together, we use multiple evidence types:
 
 - end-to-end latency
 - cycle-level timeline splits
