@@ -1,4 +1,4 @@
-# WS Kernel Evolution: From Schedule Redesign To Hardware-Facing Refinements
+# Building A High-Performance Hopper WS GQA Kernel: From FA3-Inspired Scheduling To Systematic Optimization
 
 ## Introduction
 
