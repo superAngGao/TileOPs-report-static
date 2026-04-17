@@ -334,6 +334,29 @@ become much larger:
 - `qk_issue`: `200 -> 1066`
 - `pv_issue`: `216 -> 941`
 
+At the source level, the anchor variant is best understood as a small but
+coordinated rewrite of the consumer loop rather than as one isolated line move.
+For a reader who wants to reproduce the direction, the practical recipe is:
+
+1. Split the consumer loop into a first-tile path (`n_idx == 0`) and a
+   steady-state path (`n_idx > 0`).
+2. Keep the first-tile path close to the old behavior: `QK -> wait -> fence
+   acc_s -> softmax -> copy(acc_s_cast)`, with no `PV` yet.
+3. In the steady-state path, issue `PV` before the softmax-side reduction is
+   fully drained, then replace the generic `wait_wgmma<1>()` / `wait_wgmma<0>()`
+   pair with explicit anchor waits `wait_wgmma_anchor<1>()` and
+   `wait_wgmma_anchor<0>()`.
+4. Move `rescale(acc_o)` out of the old `pre-PV` region and place it only after
+   the anchored `wait<0>` and `v_empty` handoff.
+5. For the causal kernel, keep the post-WGMMA mask as a separate branch on the
+   last `K` block (`n_idx == loop_range - 1`) so that masking is applied after
+   the `QK` update, not by pre-filling the accumulator.
+
+This is why the anchor result should not be described as "just delayed
+rescale". The rescale move is the dominant source-level simplification, but it
+works together with an explicit first-tile / steady-state branch split and with
+anchored wait placement around the `QK -> softmax -> PV` boundary.
+
 Here the exact code motion is the key fact. In `reorder`, the old output path
 still performs `rescale(acc_o)` before `PV`. In the delayed-rescale variant,
 that work is removed from the `pre-PV` region and moved to after `wait0`. The
@@ -358,6 +381,32 @@ the casted `acc_s` values consumed by `PV`, and the old output accumulator path
 at the same time. In the delayed-rescale variant, the `acc_o` path moves to
 after `wait0`, so the hottest `pre-PV -> wait1 -> softmax` region becomes much
 cleaner.
+
+The anchor-specific waits matter because they change where the consumer loop is
+allowed to fence the two accumulator families. In the old reorder kernel, the
+compiler-facing structure is roughly:
+
+- `QK`
+- generic `wait<1>` and `fence(acc_s)`
+- softmax-side work
+- generic `wait<0>` and `fence(acc_o)`
+- `rescale(acc_o)`
+
+In the anchor kernel, the steady-state path becomes closer to:
+
+- `QK`
+- `PV`
+- `wait_wgmma_anchor<1>` and `fence(acc_s)`
+- softmax-side work
+- `wait_wgmma_anchor<0>` and `fence(acc_o)`
+- `v_empty`
+- delayed `rescale(acc_o)`
+
+That reorganization does two things together. First, it shortens the live
+range overlap between `acc_o`, `acc_s`, softmax temporaries, and the casted
+`acc_s` path consumed by `PV`. Second, it exposes a different dependence shape
+to the compiler, so the generated `WARPGROUP/HGMMA` schedule is no longer the
+same as in `reorder`.
 
 The delayed-rescale-only experiment is the key isolating test. Without adding
 the rest of the anchor machinery, moving rescale alone already reproduces most
@@ -394,6 +443,14 @@ So the most defensible interpretation is a coupled one: the source-level
 register-flow change causes the compiler to lower the same logical `QK/PV`
 stages into a different Hopper `WARPGROUP/HGMMA` schedule, and that new
 schedule interacts differently with real accumulator-pipeline constraints.
+
+The important reproducibility lesson is therefore not "copy this exact anchor
+primitive". It is: if a WS attention kernel still carries both `acc_s` and
+`acc_o` pressure through the same `pre-PV -> wait1 -> softmax` region, then a
+good next experiment is to introduce an explicit steady-state branch, push the
+old-output rescale past the final `wait`, and force the `acc_s` and `acc_o`
+fences to occur at separate anchored synchronization points. That is the source
+pattern that produced the better register-flow behavior here.
 
 This also explains the apparent paradox of longer `QK/PV` windows but better
 steady-state throughput. The cost does not disappear; it moves. `reorder`
