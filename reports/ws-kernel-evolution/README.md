@@ -477,19 +477,34 @@ isolated sub-window.
 
 The three-step mainline above explains how the final anchor kernel emerged, but
 it does not fully explain the remaining long-sequence gap to FA3. That gap led
-to one more causal-specific question: should the outer scheduler continue to use
-the current paired causal work unit, or should it switch to a single-tile work
-unit that more closely matches FA3's causal scheduler?
+to one more causal-specific optimization question above the tile level: once
+the inner compute body is already strong, how should the outer scheduler issue
+causal tiles whose costs are highly non-uniform?
 
-This is a causal-specific design choice because pairing is not arbitrary. The
-current anchor kernel uses a paired outer work unit `(k, M-1-k)` to flatten the
-causal triangle imbalance: each outer work item mixes one light tile from the
-top of the triangle with one heavy tile from the bottom. That is a sensible
-local balancing strategy, especially at short sequence lengths. But it also
-makes the outer scheduler coarser. FA3 does not use this paired work unit. Its
-causal scheduler issues single tiles, then relies on reverse-`m_block`
-ordering, query-head-space sectioning, and dynamic persistent issuance to
-recover load balance and locality.
+Causal attention is special here because different tiles do not carry the same
+amount of work. Tiles far from the causal diagonal see a much larger valid
+`K/V` span, so they run as heavy tiles; tiles closer to the diagonal see a much
+shorter valid span, so they run as light tiles. This means the causal triangle
+is not only sparse in shape, but also strongly imbalanced in per-tile cost.
+
+That imbalance makes naive token-order issuance problematic. If the outer
+scheduler simply walks tiles in forward token order, then the remaining work
+tends to become increasingly bottom-heavy: light tiles retire early, while the
+heavy tiles near the bottom of the triangle accumulate into a long tail. The
+kernel is then paced by a small number of late heavy work items, even when the
+average tile cost looks acceptable. So for causal GQA, outer issue scheduling
+is not a cosmetic detail; it is part of the performance-critical design space.
+
+That leaves two natural strategies. The current anchor kernel uses a paired
+outer work unit `(k, M-1-k)` to flatten the triangle imbalance statically:
+each outer work item binds one light tile from the top of the triangle with one
+heavy tile from the bottom. This is a direct load-balancing response, and it is
+especially sensible at short sequence lengths. The alternative is the FA3-style
+direction: keep single-tile work units, then recover balance through a
+reverse-`m_block` issue order, query-head-space sectioning, and dynamic
+persistent issuance. In other words, paired scheduling reduces the imbalance by
+changing the work unit, while reverse-block single-tile scheduling keeps the
+work unit fine-grained and lets the outer scheduler react more flexibly.
 
 To separate these two strategies, we built a single-tile outer-scheduler
 variant that keeps the inner anchor compute body largely unchanged while
@@ -499,11 +514,13 @@ kernel yet, but it is already useful as a design probe.
 ![Paired vs single-tile scheduler](figures/pair_vs_single_scheduler_strategy.png)
 
 The schematic above uses a small causal example to show the difference in
-grouping and traversal. The paired strategy binds one light tile and one heavy
-tile into the same outer work item, while the single-tile strategy lets the
-outer scheduler issue one tile at a time in reverse `m_block` order. Both still
-operate inside the same query-head section, but they expose very different
-scheduler granularity to the outer policy.
+grouping and traversal. The paired strategy directly cancels part of the
+triangle imbalance by binding one light tile and one heavy tile into the same
+outer work item. The single-tile strategy instead keeps each tile independent
+and lets the outer scheduler issue them one at a time in reverse `m_block`
+order. Both still operate inside the same query-head section, but they expose
+very different ways of handling the causal long-tail problem: static balancing
+inside each work item versus finer-grained reverse-block issuance.
 
 | Shape | Paired Anchor ms | Single-Tile ms | Single / Paired |
 | --- | ---: | ---: | ---: |
@@ -516,11 +533,13 @@ scheduler granularity to the outer policy.
 | llama8b-256k | 1033.3350 | 1034.1890 | 100.1% |
 
 This table shows a clear crossover shape. Pairing is the right outer strategy
-for small shapes, where the extra scheduler freedom of single-tile does not pay
-for itself. Around `16k`, the two become nearly identical. At `32k-64k`,
-single-tile becomes meaningfully better. And by `128k-256k`, the single-tile
-outer scheduler remains competitive but does not yet deliver a decisive
-end-to-end win on its own.
+for small shapes, where the causal imbalance is modest enough that the coarse
+but well-balanced paired work unit wins. Around `16k`, the two become nearly
+identical. At `32k-64k`, single-tile becomes meaningfully better, which is
+consistent with the idea that long-sequence causal tails benefit from finer
+outer issue control. And by `128k-256k`, the single-tile outer scheduler
+remains competitive but does not yet deliver a decisive end-to-end win on its
+own.
 
 The Nsight Compute data makes that last point more precise. At `64k`, `128k`,
 and `256k`, the single-tile outer scheduler consistently produces a more
