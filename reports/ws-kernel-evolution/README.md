@@ -367,6 +367,11 @@ The last major gain comes from moving `rescale(acc_o)` to after `wait0`. At
 first glance the result looks contradictory, because some launch-side windows
 become much larger:
 
+Here the name **anchor** comes from the use of explicit anchored wait points
+(`wait_wgmma_anchor<1>()` and `wait_wgmma_anchor<0>()`) that pin where the two
+accumulator families are fenced and where the delayed old-output repair is
+allowed to re-enter the schedule.
+
 - `qk_issue`: `200 -> 1066`
 - `pv_issue`: `216 -> 941`
 
