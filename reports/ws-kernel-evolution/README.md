@@ -208,11 +208,6 @@ instead of forcing all phases through one CTA-local path.
 producer warp group stages future `K/V` tiles while two consumer warp groups
 alternate tensor-core work through an explicit handoff protocol.*
 
-![Three-kernel full cycle](figures/ws_three_kernel_full_cycle.png)
-
-*Figure 3. Full-cycle view of the baseline warp-specialized pipeline, including
-fill, steady state, and drain phases.*
-
 At a high level, the schedule adopts the same class of information-flow idea
 emphasized by the [FlashAttention-3 paper](https://tridao.me/publications/flash3/flash3.pdf):
 one producer warp group feeds `K/V`, while two consumer warp groups alternate
@@ -225,12 +220,13 @@ kernel, data movement and tensor-core issue remain chained behind one CTA-local
 loop. In the WS kernel, they are explicitly staged and handed off between
 specialized warp groups.
 
-Figures 2 and 3 should be read with that overlap story in mind. Figure 2 shows
-the steady-state regime: the producer is responsible only for preparing future
-tiles, while `WG1` and `WG2` alternate as consumers on the current stream of
-work. Figure 3 then expands that steady-state picture into the full lifecycle
-of the CTA, making clear that the benefit is not only a shorter local phase but
-a more continuous execution rhythm across fill, steady state, and drain.
+Figure 2 should be read specifically as the schedule definition that aligns our
+baseline WS kernel with the FA3-style execution model. The producer is
+responsible only for preparing future tiles, while `WG1` and `WG2` alternate as
+consumers on the current stream of work. That division is the key schedule
+change in this section. The later locality and anchor optimizations do not
+replace this schedule; they refine how work is ordered and how the same
+schedule interacts with memory and registers.
 
 The strongest evidence that this is a schedule win is that the Tensor Core work
 does not materially change, but its packing does. Across the pre-WS and
@@ -256,19 +252,26 @@ specialization, explicit staging, and tighter Tensor Core packing.
 
 ## 3. Reorder As A Memory-System Win
 
-The next milestone, `KV-Locality Reorder`, is more subtle. In the local
-steady-state split, the core windows barely move:
+The next milestone, `KV-Locality Reorder`, should be read as a refinement on
+top of the baseline WS schedule rather than as a new schedule definition. The
+producer-consumer structure introduced in the previous section remains intact:
+the kernel still uses the same `1 producer + 2 consumers` organization and the
+same FA3-aligned steady-state execution model. What changes here is how that
+schedule traverses the workload above the tile level.
+
+In the local steady-state split, the core windows barely move:
 
 - `qk_issue`: `198 -> 200`
 - `pv_issue`: `215 -> 216`
 - `softmax_core`: `1309 -> 1313`
 
-That is consistent with the actual source-level change. Reorder keeps the same
-`1 producer + 2 consumers` WS skeleton and nearly the same consumer core body.
+That is consistent with the actual source-level change. Reorder keeps nearly
+the same consumer core body and nearly the same intra-tile compute sequence.
 What changes is the traversal order of the persistent kernel: the work becomes
 more `KV`-head-friendly, so neighboring iterations reuse a more similar `K/V`
-working set. This is why the memory-system footprint improves even though the
-local arithmetic windows look almost unchanged.
+working set. In other words, this step does not replace the warp-specialized
+schedule from Section 2; it changes the visitation order and memory footprint
+of that same schedule.
 
 Yet total measured time still improves from `2919` cycles to `2841` cycles.
 That makes a pure "better local compute schedule" explanation too weak. The
@@ -288,6 +291,10 @@ the WS schedule generates, even if the remaining stream does not have a lower
 miss ratio.
 
 ![Milestone stitched timelines](figures/milestone_stitched_timelines.png)
+
+*Figure 4. Timeline context across milestones. The reorder step should be read
+as a locality-oriented refinement on top of the same baseline WS schedule,
+rather than as a different producer-consumer execution model.*
 
 This step is important because it narrows the remaining search space. Once the
 schedule is structurally sound and the memory-system footprint is smaller, the
