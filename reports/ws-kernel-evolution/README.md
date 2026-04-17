@@ -12,19 +12,21 @@ for isolated microbenchmarks but for practical AI systems.
 Algorithm papers usually explain these kernels primarily through the lens of
 computation and scheduling principles. That perspective is necessary, but it is
 not sufficient to obtain a near-SOTA operator in practice. Once the target is a
-real Hopper implementation, the remaining gap is no longer purely algorithmic:
-it also depends on how the schedule interacts with the hardware execution
-model, how the compiler lowers that schedule into concrete tensor-core code,
-and how the workload itself exposes or limits optimization freedom.
+real high-performance GPU implementation, the remaining gap is no longer purely
+algorithmic: it also depends on how the schedule interacts with the hardware
+execution model, how the compiler lowers that schedule into concrete
+tensor-core code, and how the workload itself exposes or limits optimization
+freedom.
 
-Hopper makes this gap especially visible. Its warp-specialized (WS)
-programming regime is powerful but highly specific, built around warpgroup-level
-tensor-core execution, explicit producer-consumer orchestration, and tight
-interaction among `TMA`, `WGMMA`, shared memory, and register allocation.
-These mechanisms create large performance opportunities, but they also make
-kernel behavior much more sensitive to schedule shape, locality policy,
-synchronization placement, compiler-lowered register flow, and workload
-structure than in more conventional CTA-level designs.
+This challenge is particularly visible for GQA on modern high-performance
+GPUs. Hopper provides a representative example because its warp-specialized
+(WS) programming regime is both powerful and highly specific, built around
+warpgroup-level tensor-core execution, explicit producer-consumer
+orchestration, and tight interaction among `TMA`, `WGMMA`, shared memory, and
+register allocation. These mechanisms create large performance opportunities,
+but they also make kernel behavior much more sensitive to schedule shape,
+locality policy, synchronization placement, compiler-lowered register flow,
+and workload structure than in more conventional CTA-level designs.
 
 FlashAttention-3 (FA3) is the key prior reference point in this setting. FA3
 shows that high-performance Hopper attention is not achieved by arithmetic
