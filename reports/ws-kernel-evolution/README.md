@@ -370,6 +370,14 @@ anchor's `1030`, and total time improves from `2841` to `2716`.
 figure highlights which hot windows are actually reshaped by the final
 register-flow cleanup on top of the earlier WS and locality improvements.*
 
+Figure note: the front-end, detailed core, and tail panels come from different
+probes and should not be summed as a runtime. The updated core split is meant
+to remove the ambiguity of the older coarse `issue` / `softmax` labels by
+separating `QK`, rescale, `wait(v)`, `PV`, preamble, and softmax core. The NCU
+panel uses `sm__pipe_tensor_cycles_active.avg.pct_of_peak_sustained_elapsed` on
+the canonical `4k` causal shape; GMMA work is essentially unchanged across
+these WS milestones, but tensor-pipe utilization rises.
+
 The codegen evidence makes the mechanism concrete. At the generated CUDA level,
 the `QK` loops still look broadly similar across `reorder`,
 `delayed-rescale-only`, and `anchor`. But the generated SASS is very different:
