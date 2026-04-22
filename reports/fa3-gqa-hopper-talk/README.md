@@ -57,39 +57,13 @@ Hopper 改变的不是“峰值算力数字”，而是高性能 attention kerne
 
 ![Slide 5 Figure](figures/slide5_fa3_hopper_intra_tile.png)
 
-**要点**
+| 要点 | 真正的 overlap |
+| --- | --- |
+| `WGMMA`：Hopper 的 warpgroup-level Tensor Core 原语<br>`TMA`：Hopper 的异步 `GMEM -> SMEM` 搬运原语<br>`pipeline GEMM` 是目标：让 `TMA + QK + softmax-side work + PV` 重叠推进<br>`ping-pong` 是组织方式：`1 producer + 2 consumers` 在 steady state 里交替接力 | producer 在搬下一拍 `K/V`<br>一个 consumer 在做当前拍 `QK`<br>另一个 consumer 在做上一拍相关的 softmax-side work / `PV`<br><br>真正的 overlap 不是“所有步骤同时做”，而是这三类工作被 barrier 和 fence 精确错开，而不是简单串行 |
 
-- `WGMMA`：Hopper 的 warpgroup-level Tensor Core 原语
-- `TMA`：Hopper 的异步 GMEM -> SMEM 搬运原语
-- `pipeline GEMM` 是目标：让 `TMA + QK + softmax-side work + PV` 重叠推进
-- `ping-pong` 是组织方式：`1 producer + 2 consumers` 在 steady state 里交替接力
-
-**这一页最重要的是依赖关系**
-
-- `K` 的 `TMA` 先完成，consumer 才能开始当前拍的 `QK`
-- `QK` 发出之后，不需要等整个 tile 都算完，另一组 consumer 就可以被 release，开始接下一拍
-- softmax-side work 要等 `QK` 到达可消费阶段，也就是 `wait<1> + acc_s fence` 之后才能开始
-- `PV` 还额外依赖对应的 `V tile ready`，所以它要等 `v_full`
-- `V buffer` 只有在 `PV` 真正完成，也就是 `wait<0> + acc_o fence` 之后，才能通过 `v_empty` 归还给 producer
-- `K buffer` 的释放更早，在 `QK` 对应结果已经进入 softmax-side 路径后，就可以通过 `k_empty` 提前归还
-
-**把它按一拍 steady state 展开，可以读成：**
-
-1. producer 等 `k_empty`，然后搬下一拍 `K`
-2. `k_full` 发布后，当前 consumer 开始 `QK`
-3. `QK` 发出后，named barrier release 另一组 consumer
-4. 当前 consumer 等 `wait<1>`，然后进入 softmax-side work
-5. 与此同时，如果上一拍的 `V` 已 ready，则当前拍可以发 `PV`
-6. `PV` 完成并经过 `wait<0>` 后，`V buffer` 才能通过 `v_empty` 释放
-7. producer 看到 `k_empty / v_empty` 后，再推进后续 `TMA`
-
-**所以真正的 overlap 不是“所有步骤同时做”，而是：**
-
-- producer 在搬下一拍 `K/V`
-- 一个 consumer 在做当前拍 `QK`
-- 另一个 consumer 在做上一拍相关的 softmax-side work / `PV`
-
-这三类工作被 barrier 和 fence 精确地错开，而不是简单串行。
+| 依赖关系 | 一拍 steady state 展开 |
+| --- | --- |
+| `K` 的 `TMA` 先完成，consumer 才能开始当前拍的 `QK`<br>`QK` 发出之后，不需要等整个 tile 都算完，另一组 consumer 就可以被 release，开始接下一拍<br>softmax-side work 要等 `wait<1> + acc_s fence` 之后才能开始<br>`PV` 还额外依赖对应的 `V tile ready`，所以它要等 `v_full`<br>`V buffer` 只有在 `wait<0> + acc_o fence` 之后，才能通过 `v_empty` 归还给 producer<br>`K buffer` 的释放更早，在 `QK` 结果进入 softmax-side 路径后，就可以通过 `k_empty` 提前归还 | 1. producer 等 `k_empty`，然后搬下一拍 `K`<br>2. `k_full` 发布后，当前 consumer 开始 `QK`<br>3. `QK` 发出后，named barrier release 另一组 consumer<br>4. 当前 consumer 等 `wait<1>`，然后进入 softmax-side work<br>5. 与此同时，如果上一拍的 `V` 已 ready，则当前拍可以发 `PV`<br>6. `PV` 完成并经过 `wait<0>` 后，`V buffer` 才能通过 `v_empty` 释放<br>7. producer 看到 `k_empty / v_empty` 后，再推进后续 `TMA` |
 
 **一个关键数字**
 
