@@ -237,3 +237,35 @@ else:
 - 哪些是 Hopper execution machinery
 
 这也是后面继续讲我们自己的优化工作时，不会丢主线的原因。
+
+---
+
+## References
+
+**Figure references**
+
+- Slide 5 figure (`slide5_fa3_hopper_intra_tile.png`)
+  - 基于我们自己的 Hopper WS kernel 实现与时间线整理绘制
+  - 对应代码骨架见 [\_test_ws_fa3_v2_threadbind_opt.py](/home/ga/TileOPs/_test_ws_fa3_v2_threadbind_opt.py)
+- Slide 6 left panel
+  - Ainslie et al., *GQA: Training Generalized Multi-Query Transformer Models from Multi-Head Checkpoints*, Figure 2
+  - Paper: https://arxiv.org/abs/2305.13245
+- Slide 6 right panel, upper half (`KV split / Flash Decoding`)
+  - Tri Dao, *FlashAttention-3* GTC slides, p.17
+  - Slides: /home/ga/TileOPs/experiments/ws_kernel_evolution/notes/fa3_gqa_hopper_talk/assets/external/gtc/fa3_gtc.pdf
+- Slide 6 right panel, lower half (`GQA packing`)
+  - Tri Dao, *FlashAttention-3* GTC slides, p.18
+  - Slides: /home/ga/TileOPs/experiments/ws_kernel_evolution/notes/fa3_gqa_hopper_talk/assets/external/gtc/fa3_gtc.pdf
+
+**Paper and hardware references**
+
+- Dao, *FlashAttention-2: Faster Attention with Better Parallelism and Work Partitioning*
+  - https://tridao.me/publications/flash2/flash2.pdf
+- Shah et al., *FlashAttention-3: Fast and Accurate Attention with Asynchrony and Low-precision*
+  - https://tridao.me/publications/flash3/flash3.pdf
+- NVIDIA Hopper architecture overview / technical blog
+  - https://developer.nvidia.com/blog/nvidia-hopper-architecture-in-depth/
+- NVIDIA H100 product page
+  - https://www.nvidia.com/en-eu/data-center/h100/
+- NVIDIA H200 product page
+  - https://www.nvidia.com/es-la/data-center/h200/
