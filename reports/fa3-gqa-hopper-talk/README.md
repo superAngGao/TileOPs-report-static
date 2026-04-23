@@ -88,29 +88,25 @@ Hopper 改变的不是“峰值算力数字”，而是高性能 attention kerne
 
 **核心观点**
 
-对 decode 而言，`FA3` 既有通用优化，也有建立在 `GQA` 结构上的附加优化。
+这一页其实在讲三层不同的东西：`GQA` 的 shared-KV 语义、decode 的通用并行化，以及建立在 `GQA` 结构上的额外 packing。
 
 ![Slide 6 Figure](figures/slide6_fa3_gqa_packing.png)
 
-**左边：语义结构**
+| 层次 | 它回答什么问题 | 是否是 GQA 特有 | 这一页应该记住什么 |
+| --- | --- | --- | --- |
+| shared-KV semantics | 哪些 `Q heads` 共享同一个 `KV head`？ | 是语义定义，不是优化 | 左图展示的是共享关系本身 |
+| `KV split / Flash Decoding` | decode 时 `Q` 很短、`KV` 很长，怎样暴露足够并行度？ | 否，`MHA` 也能用 | 这是通用 decode 并行化 |
+| `GQA packing` | 当 `Q` 太短时，怎样把 Tensor Core tile 填得更满？ | 是，建立在 shared-KV 结构上 | 这是 `MQA/GQA` 的额外硬件利用策略 |
 
-- `GQA` 中多个 `Q heads` 共享一个 `KV head`
-- 这只是 shared-KV semantics，本身还不是硬件优化
+**按图来读**
 
-**右边上半部分：通用 decode 优化**
-
-- `KV split / Flash Decoding`
-- 这是 decode 的通用优化
-- `MHA` 也能使用
-
-**右边下半部分：GQA-specific 优化**
-
-- `GQA packing`
-- 当 `Q` 太短时，单个 query head 很难把 tile 填满
-- `MQA/GQA` 可以把共享同一 `KV head` 的多个 query heads 一起 pack 起来
+- 左边：多个 `Q heads` 共享一个 `KV head`，这是 `GQA` 的定义，不是 schedule。
+- 右边上半部分：先用 `KV split` 把 decode 工作沿 `KV/context` 方向切开，拿到足够并行度。
+- 右边下半部分：再在 `MQA/GQA` 上用 `packing multiple query heads per KV head` 提高短 `Q` 下的 tile 利用率。
 
 **结论**
 
+- `head mapping` / shared-KV 是语义前提
 - `KV split` 解决的是 decode 并行度问题
 - `GQA packing` 解决的是短 `Q` 下 tile 利用率问题
 
