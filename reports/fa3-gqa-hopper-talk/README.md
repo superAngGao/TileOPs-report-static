@@ -112,11 +112,11 @@ Hopper 改变的不是“峰值算力数字”，而是高性能 attention kerne
 
 我们的实现把 `FA3` 落成了三个层次：`shared-KV` 语义、decode 期工作切分、tile 内执行层，而且这三层在 `FA3` 与 `TileLang` 里是一一对应的。
 
-| 层次 | 这一层回答什么问题 | FA3 中怎么实现 | FA3 原语 / 机制 | TileLang 中的实现 |
-| --- | --- | --- | --- | --- |
-| Shared-KV semantics | “谁和谁共享同一个 `KV head`？” | `GQA/MQA` 通过 head indexing 保留 shared-KV，不复制 `K/V` | head remap / tensor indexing / grouped head layout | head mapping / grouped work decomposition |
-| Decode-side work partition | “decode 时这些工作怎么切、怎么分派？” | `KV split / Flash Decoding` + `GQA packing` heuristic | split-KV launch / partial reduction / `pack_gqa` reshape | persistent outer scheduling / dispatch policy |
-| Intra-tile engine | “一个 tile 内部怎么把硬件吃满？” | `TMA + WGMMA + ping-pong + wait/fence` | `TMA`, `mbarrier`, `WGMMA`, `wait_group`, named barrier | `T.tma_copy` / `T.wgmma_gemm` / barrier / `T.wait_wgmma` / fence |
+| 层次 | FA3 中的组织方式 | 关键原语 / 机制 | TileLang 对应 |
+| --- | --- | --- | --- |
+| Shared-KV semantics | `GQA/MQA` 通过 head indexing 保留 shared-KV，不复制 `K/V` | head remap / tensor indexing / grouped head layout | head mapping / grouped work decomposition |
+| Decode-side work partition | `KV split / Flash Decoding` + `GQA packing` heuristic | split-KV launch / partial reduction / `pack_gqa` reshape | persistent outer scheduling / dispatch policy |
+| Intra-tile engine | `TMA + WGMMA + ping-pong + wait/fence` | `TMA`, `mbarrier`, `WGMMA`, `wait_group`, named barrier | `T.tma_copy` / `T.wgmma_gemm` / barrier / `T.wait_wgmma` / fence |
 
 **结论**
 
