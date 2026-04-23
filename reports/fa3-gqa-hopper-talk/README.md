@@ -61,9 +61,15 @@ Hopper 改变的不是“峰值算力数字”，而是高性能 attention kerne
 | --- | --- |
 | `WGMMA`：Hopper 的 warpgroup-level Tensor Core 原语<br>`TMA`：Hopper 的异步 `GMEM -> SMEM` 搬运原语<br>`pipeline GEMM` 是目标：让 `TMA + QK + softmax-side work + PV` 重叠推进<br>`ping-pong` 是组织方式：`1 producer + 2 consumers` 在 steady state 里交替接力 | producer 在搬下一拍 `K/V`<br>一个 consumer 在做当前拍 `QK`<br>另一个 consumer 在做上一拍相关的 softmax-side work / `PV`<br><br>真正的 overlap 不是“所有步骤同时做”，而是这三类工作被 barrier 和 fence 精确错开，而不是简单串行 |
 
-| 依赖关系 | 一拍 steady state 展开 |
+| 算法依赖逻辑 | 对应程序动作 |
 | --- | --- |
-| `K` 的 `TMA` 先完成，consumer 才能开始当前拍的 `QK`<br>`QK` 发出之后，不需要等整个 tile 都算完，另一组 consumer 就可以被 release，开始接下一拍<br>softmax-side work 要等 `wait<1> + acc_s fence` 之后才能开始<br>`PV` 还额外依赖对应的 `V tile ready`，所以它要等 `v_full`<br>`V buffer` 只有在 `wait<0> + acc_o fence` 之后，才能通过 `v_empty` 归还给 producer<br>`K buffer` 的释放更早，在 `QK` 结果进入 softmax-side 路径后，就可以通过 `k_empty` 提前归还 | 1. producer 等 `k_empty`，然后搬下一拍 `K`<br>2. `k_full` 发布后，当前 consumer 开始 `QK`<br>3. `QK` 发出后，named barrier release 另一组 consumer<br>4. 当前 consumer 等 `wait<1>`，然后进入 softmax-side work<br>5. 与此同时，如果上一拍的 `V` 已 ready，则当前拍可以发 `PV`<br>6. `PV` 完成并经过 `wait<0>` 后，`V buffer` 才能通过 `v_empty` 释放<br>7. producer 看到 `k_empty / v_empty` 后，再推进后续 `TMA` |
+| 当前拍 `QK` 之前，当前拍 `K tile` 必须已经到 shared memory | producer 先 `T.tma_copy(..., barrier=k_full)`，consumer 再 `T.barrier_wait(k_full, ...)` 后发 `QK` |
+| 当前拍 `QK` 一旦发出，另一组 consumer 就可以被 release，去准备下一拍 | 当前 consumer 在 `QK` 发出后执行 `barrier_arrive_named(...)` / `T.sync_threads(barrier_id=..., arrive_count=256)`，形成 `WG1/WG2` 的 ping-pong handoff |
+| softmax-side work 不能直接跟在 `QK issue` 后面，必须等 `QK` accumulator 进入可消费状态 | `T.wait_wgmma(1)` + `T.warpgroup_fence_operand(acc_s, ...)` 之后，才进入 softmax / rescale 路径 |
+| `PV` 除了依赖当前拍 score，还依赖对应的 `V tile ready` | 先 `T.barrier_wait(v_full, ...)`，然后才发 `T.wgmma_gemm(...)` 对应的 `PV` |
+| `K buffer` 在 `QK` 结果已经交给 softmax-side 路径后，就可以提前释放给 producer | 在 `wait<1> + acc_s fence` 之后执行 `T.barrier_arrive(k_empty)`，让 producer 能更早复用 K slot |
+| `V buffer` 只有在 `PV` 真正完成后才能归还给 producer | `T.wait_wgmma(0)` + `T.warpgroup_fence_operand(acc_o, ...)` 之后，执行 `T.barrier_arrive(v_empty)` |
+| producer 的下一轮 `TMA` 不能抢先复用 buffer，必须等 consumer 明确归还 slot | 下一拍开始前，producer 先 `T.barrier_wait(k_empty / v_empty, ...)`，然后才重发对应的 `TMA` |
 
 **一个关键数字**
 
