@@ -201,14 +201,13 @@ else:
 
 **最重要的结论**
 
-这部分最重要的不是某个孤立 trick，而是一整套对齐关系：workload structure、decode policy 和 Hopper execution model 必须一起对齐。
+这部分最重要的不是某个孤立 trick，而是：`FA3` 说明高性能 attention kernel 需要把 workload structure、decode policy 和 Hopper execution model 一起对齐。
 
-**请记住这四点**
+**请记住这三点**
 
-1. `GQA` 先改变 workload structure：shared-KV semantics
-2. `FA3` 再重写 Hopper 上的执行模型：`TMA + WGMMA + ping-pong`
-3. decode 上有两层优化：通用的 `KV split`，以及 `MQA/GQA` 上附加的 `GQA packing`
-4. `TileLang` 能把这整套结构显式写出来，这也是后续 locality、register-flow 和 scheduling 优化的基础
+1. `GQA` 先改变的是 workload structure，而不是 tile 内 schedule 本身。
+2. `FA3` 的核心贡献，是把 attention tile 重写成围绕 `TMA + WGMMA + ping-pong` 的 Hopper-native execution model。
+3. `TileLang` 的价值，不只是能写出相似 schedule，而是能把这些 `FA3/Hopper` 原语真正接住，这才是后续优化还能继续往前推的前提。
 
 ---
 
@@ -220,7 +219,9 @@ else:
 - 哪些是 decode policy
 - 哪些是 Hopper execution machinery
 
-这也是后面继续讲我们自己的优化工作时，不会丢主线的原因。
+后面再讲我们自己的优化工作时，主线就会很清楚：
+- 先对齐 `FA3` 的 Hopper execution model
+- 再在此基础上继续做 locality、register-flow 和 scheduling 的系统优化
 
 ---
 
