@@ -92,12 +92,6 @@ Hopper 改变的不是“峰值算力数字”，而是高性能 attention kerne
 
 ![Slide 6 Figure](figures/slide6_fa3_gqa_packing.png)
 
-| 层次 | 它回答什么问题 | 是否是 GQA 特有 | 这一页应该记住什么 |
-| --- | --- | --- | --- |
-| shared-KV semantics | 哪些 `Q heads` 共享同一个 `KV head`？ | 是语义定义，不是优化 | 左图展示的是共享关系本身 |
-| `KV split / Flash Decoding` | decode 时 `Q` 很短、`KV` 很长，怎样暴露足够并行度？ | 否，`MHA` 也能用 | 这是通用 decode 并行化 |
-| `GQA packing` | 当 `Q` 太短时，怎样把 Tensor Core tile 填得更满？ | 是，建立在 shared-KV 结构上 | 这是 `MQA/GQA` 的额外硬件利用策略 |
-
 **按图来读**
 
 - 左边：多个 `Q heads` 共享一个 `KV head`，这是 `GQA` 的定义，不是 schedule。
