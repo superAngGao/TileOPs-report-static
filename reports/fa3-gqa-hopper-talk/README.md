@@ -110,17 +110,20 @@ Hopper 改变的不是“峰值算力数字”，而是高性能 attention kerne
 
 **核心观点**
 
-我们的实现把 `FA3` 落成了三个层次：`shared-KV` 语义、decode 期工作切分、tile 内执行层，而且这三层在 `FA3` 与 `TileLang` 里是一一对应的。
+这页真正要回答的不是“schedule 能不能对齐”，而是：`FA3/Hopper` 依赖的关键原语，在 `TileLang` 里有没有明确对应。
 
-| 层次 | FA3 中的组织方式 | 关键原语 / 机制 | TileLang 对应 |
-| --- | --- | --- | --- |
-| Shared-KV semantics | `GQA/MQA` 通过 head indexing 保留 shared-KV，不复制 `K/V` | head remap / tensor indexing / grouped head layout | head mapping / grouped work decomposition |
-| Decode-side work partition | `KV split / Flash Decoding` + `GQA packing` heuristic | split-KV launch / partial reduction / `pack_gqa` reshape | persistent outer scheduling / dispatch policy |
-| Intra-tile engine | `TMA + WGMMA + ping-pong + wait/fence` | `TMA`, `mbarrier`, `WGMMA`, `wait_group`, named barrier | `T.tma_copy` / `T.wgmma_gemm` / barrier / `T.wait_wgmma` / fence |
+| FA3 / Hopper 关键原语 | 在 FA3 里负责什么 | TileLang 中怎么表达 |
+| --- | --- | --- |
+| `TMA` | 把 `K/V` 异步送到 `SMEM`，并把搬运从 consumer 计算路径中拿出去 | `T.tma_copy(...)` |
+| full / empty barrier | 管理 `K/V` slot 何时 ready、何时可复用 | `T.barrier_wait(...)` / `T.barrier_arrive(...)` |
+| `WGMMA` | 执行 `QK` 和 `PV` 两段 warpgroup Tensor Core 主计算 | `T.wgmma_gemm(...)` |
+| `wait_group` | 把 async `WGMMA` 推进到 softmax-side / output-side 可消费边界 | `T.wait_wgmma(1)` / `T.wait_wgmma(0)` |
+| operand fence | 把 `acc_s / acc_o` 从 Tensor Core accumulator 转成后续路径可安全读取的 operand | `T.warpgroup_fence_operand(...)` |
+| named barrier handoff | 让 `WG1 / WG2` 在 steady state 中交替接力 | `T.sync_threads(barrier_id=..., arrive_count=256)` + `T.call_extern(... "tl::barrier_arrive_named", ...)` |
 
 **结论**
 
-`TileLang` 不是只支持某个原语，而是能把 `FA3` 这三层结构都显式表达出来。
+`TileLang` 的关键价值，不只是“能写出相似 schedule”，而是这些 `FA3/Hopper` 原语大多都有明确映射；少数像 named barrier 这样的特殊机制，也可以通过更低层接口接进去。
 
 ---
 
