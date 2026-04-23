@@ -78,6 +78,8 @@ Hopper 改变的不是“峰值算力数字”，而是高性能 attention kerne
 
 真正的 overlap 不是“所有步骤同时做”，而是 producer 喂数、当前拍 `QK`、上一拍 softmax/`PV` 这三类工作被 barrier 和 fence 精确错开。
 
+这里默认的是 `double buffer` 组织：`K/V` 都在两个 shared-memory slots 之间交替复用，所以整页里的 `full / empty`、`k_full / k_empty`、`v_full / v_empty` 本质上都在管理这两个 buffer slots 的生命周期。
+
 **一个关键数字**
 
 - `FA2` 在 `H100` 上大约只有 `35%` utilization
