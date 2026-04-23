@@ -60,9 +60,9 @@ Hopper 改变的不是“峰值算力数字”，而是高性能 attention kerne
 | 算法依赖逻辑 | 对应程序动作 |
 | --- | --- |
 | 当前拍 `QK` 之前，当前拍 `K tile` 必须已经到 shared memory | producer 先 `T.tma_copy(..., barrier=k_full)`，consumer 再 `T.barrier_wait(k_full, ...)` 后发 `QK` |
-| 另一组 consumer 只有在当前 consumer 发出本拍应负责的关键 GEMM 后，才能被 release | bootstrap (`n_idx == 0`) 时，release 跟在 `QK` 后；steady state (`n_idx > 0`) 时，release 跟在 `PV` 后。程序上对应 `barrier_arrive_named(...)` / `T.sync_threads(barrier_id=..., arrive_count=256)` 形成的 `WG1/WG2` handoff |
 | softmax-side work 不能直接跟在 `QK issue` 后面，必须等 `QK` accumulator 进入可消费状态 | `T.wait_wgmma(1)` + `T.warpgroup_fence_operand(acc_s, ...)` 之后，才进入 softmax / rescale 路径 |
 | `PV` 除了依赖当前拍 score，还依赖对应的 `V tile ready` | 先 `T.barrier_wait(v_full, ...)`，然后才发 `T.wgmma_gemm(...)` 对应的 `PV` |
+| 另一组 consumer 只有在当前 consumer 发出本拍应负责的关键 GEMM 后，才能被 release | bootstrap (`n_idx == 0`) 时，release 跟在 `QK` 后；steady state (`n_idx > 0`) 时，release 跟在 `PV` 后。程序上对应 `barrier_arrive_named(...)` / `T.sync_threads(barrier_id=..., arrive_count=256)` 形成的 `WG1/WG2` handoff |
 | `K buffer` 在 `QK` 结果已经交给 softmax-side 路径后，就可以提前释放给 producer | 在 `wait<1> + acc_s fence` 之后执行 `T.barrier_arrive(k_empty)`，让 producer 能更早复用 K slot |
 | `V buffer` 只有在 `PV` 真正完成后才能归还给 producer | `T.wait_wgmma(0)` + `T.warpgroup_fence_operand(acc_o, ...)` 之后，执行 `T.barrier_arrive(v_empty)` |
 | producer 的下一轮 `TMA` 不能抢先复用 buffer，必须等 consumer 明确归还 slot | 下一拍开始前，producer 先 `T.barrier_wait(k_empty / v_empty, ...)`，然后才重发对应的 `TMA` |
