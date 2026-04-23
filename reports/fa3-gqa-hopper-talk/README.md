@@ -13,8 +13,8 @@
 **要点**
 
 - 多个 `Q heads` 共享同一个 `KV head`
-- 这会显著改变 `KV` footprint
-- 也会改变后续 kernel 优化的重点
+- `KV` footprint 和 reuse 结构都会变
+- 后续 kernel 优化重点也会跟着变
 
 ---
 
@@ -26,11 +26,11 @@ Hopper 改变的不是“峰值算力数字”，而是高性能 attention kerne
 
 **要点**
 
-- `WGMMA`：Hopper 把 Tensor Core 主计算提升到 warpgroup 粒度。一个 warpgroup 由 `4 warps / 128 threads` 组成，协同 issue `wgmma.mma_async`，这比旧的 warp-level `mma.sync` 更适合大 tile 和深流水。
-- `TMA`：Hopper 新增了专门的数据搬运硬件。单线程提交 tensor descriptor 和 block coordinates 之后，多维地址生成与 `GMEM <-> SMEM` 搬运由硬件完成，并通过 `mbarrier` / async barrier 通知完成。
-- `WGMMA` 解决的是 compute roofline，`TMA` 解决的是 feed roofline。`TMA` 本身不会提高 HBM 峰值带宽，但会显著降低地址生成、copy loop 和线程占用开销，提高有效带宽利用率。
-- 对我们关心的 dense `BF16/FP16` Tensor Core 路径，`H100/H200 SXM` 的理论峰值约为 `989 TFLOPS`；官方给出的带 sparsity 标称是 `1,979 TFLOPS`。`H200` 还提供 `4.8 TB/s` 的 `HBM3e` 带宽。
-- 因此，attention kernel 的核心问题不再只是“算对”，而是能否让 `WGMMA` 持续有活干，并让 `TMA`、barrier 和寄存器分配不成为瓶颈。
+- `WGMMA`：把 Tensor Core 主计算提升到 warpgroup 粒度
+- `TMA`：把 `GMEM -> SMEM` 的 tensor copy 交给专门硬件
+- `WGMMA` 主要对应 compute roofline，`TMA` 主要对应 feed roofline
+- dense `BF16/FP16` Tensor Core 路径下，`H100/H200 SXM` 理论峰值约 `989 TFLOPS`
+- 真正的问题不再只是“算对”，而是能否持续喂满 `WGMMA`
 
 ---
 
@@ -45,7 +45,8 @@ Hopper 改变的不是“峰值算力数字”，而是高性能 attention kerne
 - `FA2` 已经有 IO-aware FlashAttention formulation
 - `FA2` 已经支持 `MQA/GQA`
 - `FA2` 通过 indexing 避免复制 `K/V`
-- 但 `FA2` 没有把 kernel 重写成 Hopper-native 的执行模型
+- `FA2` 主要还是把 `QK -> softmax -> PV` 组织在更传统的 CTA / software-pipelined 路径里
+- 但它还不是 Hopper-native execution model
 
 ---
 
