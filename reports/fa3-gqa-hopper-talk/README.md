@@ -57,16 +57,6 @@ Hopper 改变的不是“峰值算力数字”，而是高性能 attention kerne
 
 ![Slide 5 Figure](figures/slide5_fa3_hopper_intra_tile.png)
 
-| 结构角色 | 在 overlap 里的具体位置 |
-| --- | --- |
-| `TMA`：producer 负责把下一拍 `K/V` 从 `GMEM` 异步送到 `SMEM` | 对应 steady state 里最靠前的“喂数”波次：producer 在后台搬下一拍 `K/V`，不给 consumer 主计算抢执行资源 |
-| `WGMMA(QK)`：当前拍 consumer 的第一段 Tensor Core 主计算 | 对应当前拍最核心的 compute wave：一旦 `k_full` 满足，当前 consumer 就开始 `QK` |
-| softmax-side work：把 `QK` 结果接到标量路径 | 对应上一段 `QK` 进入 `wait<1> + acc_s fence` 后的消费窗口，它和另一侧的 `QK/PV` 交错进行 |
-| `WGMMA(PV)`：consumer 的第二段 Tensor Core 主计算 | 对应与 softmax-side work 并行推进的另一条 compute wave；它还要额外等待 `v_full` |
-| `ping-pong`：`1 producer + 2 consumers` 的接力结构 | 对应整个 steady state 的组织方式：一个 consumer 做当前拍 `QK`，另一个 consumer 处理上一拍相关的 softmax-side work / `PV` |
-
-真正的 overlap 不是“所有步骤同时做”，而是 producer 喂数、当前拍 `QK`、上一拍 softmax/`PV` 这三类工作被 barrier 和 fence 精确错开。
-
 | 算法依赖逻辑 | 对应程序动作 |
 | --- | --- |
 | 当前拍 `QK` 之前，当前拍 `K tile` 必须已经到 shared memory | producer 先 `T.tma_copy(..., barrier=k_full)`，consumer 再 `T.barrier_wait(k_full, ...)` 后发 `QK` |
@@ -76,6 +66,16 @@ Hopper 改变的不是“峰值算力数字”，而是高性能 attention kerne
 | `K buffer` 在 `QK` 结果已经交给 softmax-side 路径后，就可以提前释放给 producer | 在 `wait<1> + acc_s fence` 之后执行 `T.barrier_arrive(k_empty)`，让 producer 能更早复用 K slot |
 | `V buffer` 只有在 `PV` 真正完成后才能归还给 producer | `T.wait_wgmma(0)` + `T.warpgroup_fence_operand(acc_o, ...)` 之后，执行 `T.barrier_arrive(v_empty)` |
 | producer 的下一轮 `TMA` 不能抢先复用 buffer，必须等 consumer 明确归还 slot | 下一拍开始前，producer 先 `T.barrier_wait(k_empty / v_empty, ...)`，然后才重发对应的 `TMA` |
+
+| 结构角色 | 在 overlap 里的具体位置 |
+| --- | --- |
+| `TMA`：producer 负责把下一拍 `K/V` 从 `GMEM` 异步送到 `SMEM` | 对应 steady state 里最靠前的“喂数”波次：producer 在后台搬下一拍 `K/V`，不给 consumer 主计算抢执行资源 |
+| `WGMMA(QK)`：当前拍 consumer 的第一段 Tensor Core 主计算 | 对应当前拍最核心的 compute wave：一旦 `k_full` 满足，当前 consumer 就开始 `QK` |
+| softmax-side work：把 `QK` 结果接到标量路径 | 对应上一段 `QK` 进入 `wait<1> + acc_s fence` 后的消费窗口，它和另一侧的 `QK/PV` 交错进行 |
+| `WGMMA(PV)`：consumer 的第二段 Tensor Core 主计算 | 对应与 softmax-side work 并行推进的另一条 compute wave；它还要额外等待 `v_full` |
+| `ping-pong`：`1 producer + 2 consumers` 的接力结构 | 对应整个 steady state 的组织方式：一个 consumer 做当前拍 `QK`，另一个 consumer 处理上一拍相关的 softmax-side work / `PV` |
+
+真正的 overlap 不是“所有步骤同时做”，而是 producer 喂数、当前拍 `QK`、上一拍 softmax/`PV` 这三类工作被 barrier 和 fence 精确错开。
 
 **一个关键数字**
 
