@@ -136,7 +136,7 @@ Hopper 改变的不是“峰值算力数字”，而是高性能 attention kerne
 
 **核心观点**
 
-代码骨架已经把 `FA3/Hopper` 的关键结构写出来了：寄存器再分配、`TMA`、`WGMMA`、barrier handoff、`wait/fence`。
+第 6 页讲的是“原语有没有对应”；这一页讲的是：这些原语如何在同一个 kernel 骨架里同时出现，并真正组成 `1 producer + 2 consumers` 的执行结构。
 
 ```python
 tx = T.get_thread_binding()
@@ -186,11 +186,11 @@ else:
 
 **这段代码对应的结构**
 
-- producer 和 consumer 的寄存器预算不一样
-- `TMA` 和 `WGMMA` 是显式的
-- `wait/fence` 不是装饰，而是 async pipeline 的边界
-- 真实结构始终是 `1 producer + 2 consumers`
-- 这里代码只详细展开了 `producer + WG1`，`WG2` 是与 `WG1` 对称的第二个 consumer
+- `register split`：producer 和 consumer 的寄存器预算不一样
+- `TMA producer path`：`K/V` 先经过 ready / empty barrier 管理，再进入 shared memory
+- `WGMMA consumer path`：`QK` 和 `PV` 都是显式的 warpgroup GEMM
+- `wait/fence boundary`：`wait_group + operand fence` 决定 softmax-side / output-side 何时可以安全接上
+- `two-consumer structure`：真实结构始终是 `1 producer + 2 consumers`；这里只详细展开 `producer + WG1`，`WG2` 是与 `WG1` 对称的第二个 consumer
 
 完整注释版素材见：
 - [slide8_code_skeleton.md](assets/slide8_code_skeleton.md)
