@@ -121,6 +121,11 @@ Hopper 改变的不是“峰值算力数字”，而是高性能 attention kerne
 | operand fence | 把 `acc_s / acc_o` 从 Tensor Core accumulator 转成后续路径可安全读取的 operand | `T.warpgroup_fence_operand(...)` |
 | named barrier handoff | 让 `WG1 / WG2` 在 steady state 中交替接力 | `T.sync_threads(barrier_id=..., arrive_count=256)` + `T.call_extern(... "tl::barrier_arrive_named", ...)` |
 
+**补充说明**
+
+- 这里使用 `named barrier` 并非唯一可行方案；`mbarrier` 也可以拿来编排阶段顺序。
+- 但在这类 `FA3` 风格的 warp-specialized kernel 里，把 `mbarrier` 主要留给 `K/V` buffer 的 ready / empty 生命周期，把 `named barrier` 留给 `WG1/WG2` 的 consumer handoff，会让“资源状态”和“执行相位”这两层逻辑分得更清楚。
+
 **结论**
 
 `TileLang` 的关键价值，不只是“能写出相似 schedule”，而是这些 `FA3/Hopper` 原语大多都有明确映射；少数像 named barrier 这样的特殊机制，也可以通过更低层接口接进去。
