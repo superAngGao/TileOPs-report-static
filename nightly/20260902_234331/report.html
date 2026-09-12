@@ -1,0 +1,333 @@
+<!DOCTYPE html><html lang='zh-CN'><head>
+<meta charset='UTF-8'>
+<meta name='viewport' content='width=device-width,initial-scale=1'>
+<title>TileOPs Report · 20260902_234331</title>
+<style>
+:root{--green:#22c55e;--yellow:#f59e0b;--red:#ef4444;--blue:#3b82f6;--purple:#8b5cf6;
+      --bg:#f9fafb;--card:#fff;--border:#e5e7eb;--text:#111827;--muted:#6b7280}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,sans-serif;background:var(--bg);color:var(--text);padding:1.5rem;max-width:1100px;margin:0 auto}
+h1{font-size:1.5rem;font-weight:700;margin-bottom:.25rem}
+h2{font-size:1.15rem;font-weight:600;margin:1.5rem 0 .75rem;border-bottom:2px solid var(--border);padding-bottom:.25rem}
+h3{font-size:.95rem;font-weight:600;margin:.75rem 0 .25rem}
+.meta{color:var(--muted);font-size:.82rem;margin-bottom:1.5rem}
+.card{background:var(--card);border:1px solid var(--border);border-radius:.5rem;padding:1rem 1.25rem;margin-bottom:1rem}
+/* Overall grid */
+.overall-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:.5rem;margin:.75rem 0}
+.stat-box{background:var(--card);border:1px solid var(--border);border-radius:.375rem;padding:.6rem;text-align:center}
+.stat-box .num{font-size:1.4rem;font-weight:700;line-height:1}
+.stat-box .lbl{font-size:.72rem;color:var(--muted);margin-top:.15rem}
+/* Progress bars */
+.bar-wrap{background:#e5e7eb;border-radius:9999px;height:.75rem;overflow:hidden;margin:.25rem 0;box-shadow:inset 0 1px 2px rgba(0,0,0,.08)}
+.bar-fill{height:100%;border-radius:9999px;transition:width .6s ease;min-width:2px}
+.bar-test{background:linear-gradient(90deg,#4ade80,#22c55e)}
+.bar-bench{background:linear-gradient(90deg,#a78bfa,#8b5cf6)}
+/* Stacked bars */
+.stacked-bar{display:flex;height:100%;border-radius:9999px;overflow:hidden}
+.stacked-bar .seg{height:100%;transition:width .6s ease}
+.stacked-bar .seg:first-child{border-radius:9999px 0 0 9999px}
+.stacked-bar .seg:last-child{border-radius:0 9999px 9999px 0}
+.stacked-bar .seg:only-child{border-radius:9999px}
+.seg-passed{background:linear-gradient(90deg,#4ade80,#22c55e)}.seg-failed{background:linear-gradient(90deg,#f87171,#ef4444)}
+.seg-qualified{background:linear-gradient(90deg,#a78bfa,#7c3aed)}.seg-underperforming{background:linear-gradient(90deg,#fbbf24,#f59e0b)}
+.bar-row{display:flex;align-items:center;gap:.5rem;font-size:.82rem;margin:.2rem 0}
+.bar-label{width:50px;color:var(--muted);flex-shrink:0;font-weight:500}
+.bar-container{flex:1;min-width:60px}
+.bar-count{width:140px;text-align:right;color:var(--muted);flex-shrink:0;font-size:.75rem}
+/* Category card */
+.cat-card{display:grid;grid-template-columns:1fr auto;gap:.75rem;padding:.75rem 0;border-bottom:1px solid var(--border)}
+.cat-card:last-child{border-bottom:none}
+.cat-bars{min-width:0}
+.cat-scores{display:flex;gap:.4rem;align-items:flex-start;flex-shrink:0}
+.score-badge{display:inline-flex;flex-direction:column;align-items:center;padding:.3rem .5rem;
+             border-radius:.375rem;font-size:.72rem;font-weight:600;min-width:44px}
+.score-badge .val{font-size:1.1rem;line-height:1}
+.score-perf{background:#ede9fe;color:#5b21b6}.score-func{background:#dcfce7;color:#166534}
+.score-null{background:#f3f4f6;color:#9ca3af}
+/* Tables */
+.data-table{width:100%;border-collapse:collapse;font-size:.82rem;margin:.5rem 0}
+.data-table th{text-align:left;padding:.4rem .5rem;background:#f9fafb;border-bottom:2px solid var(--border);font-weight:600;font-size:.75rem;color:var(--muted)}
+.data-table td{padding:.35rem .5rem;border-bottom:1px solid var(--border);vertical-align:middle}
+.data-table tr:hover{background:#f0f9ff}
+.badge{display:inline-block;padding:.1rem .4rem;border-radius:.25rem;font-size:.72rem;font-weight:600}
+.badge-red{background:#fee2e2;color:#991b1b}.badge-yellow{background:#fef3c7;color:#92400e}
+.badge-green{background:#dcfce7;color:#166534}.badge-blue{background:#dbeafe;color:#1e40af}
+/* Detail section */
+.detail-item{margin:.75rem 0;padding:.75rem;background:#fafafa;border-radius:.375rem;border:1px solid var(--border)}
+.detail-item h3{margin:0 0 .35rem;font-size:.88rem}
+.detail-issues{color:var(--red);font-size:.85rem;margin:.25rem 0}
+.detail-eval{font-size:.85rem;color:var(--text);margin:.25rem 0}
+/* Assessment */
+.rec-list{margin:.5rem 0;padding-left:1.25rem}
+.rec-list li{margin:.25rem 0;font-size:.88rem}
+/* Mobile */
+@media(max-width:600px){
+  body{padding:.75rem}.card{padding:.75rem}h1{font-size:1.25rem}
+  .overall-grid{grid-template-columns:repeat(3,1fr);gap:.4rem}
+  .stat-box .num{font-size:1.1rem}
+  .cat-card{grid-template-columns:1fr;gap:.5rem}
+  .cat-scores{justify-content:flex-start}
+  .data-table{font-size:.75rem}
+}
+</style>
+</head><body>
+<h1>TileOPs Nightly Report</h1>
+<p class='meta'>Date: 20260902_234331 &nbsp;|&nbsp; Commit: <code>19fbf7ec29ccde12c4bbd2ea28948b88a49b8120</code> &nbsp;|&nbsp; Generated: 2026-09-02 23:43:43</p>
+<div class='card'>
+<h2 style='margin-top:0'>Overall Summary</h2>
+<div class='overall-grid'>
+<div class='stat-box'><div class='num'>87</div><div class='lbl'>Test Ops</div></div>
+<div class='stat-box'><div class='num' style='color:var(--green)'>1142/1144</div><div class='lbl'>Cases Pass</div></div>
+<div class='stat-box'><div class='num' style='color:var(--purple)'>182</div><div class='lbl'>Bench Ops</div></div>
+<div class='stat-box'><div class='num'>1063</div><div class='lbl'>Bench Configs</div></div>
+<div class='stat-box'><div class='num' style='color:var(--red)'>76</div><div class='lbl'>Alerts</div></div>
+<div class='stat-box'><div class='num'>11</div><div class='lbl'>Categories</div></div>
+</div>
+<div class="bar-row"><span class="bar-label">Test</span><div class="bar-container"><div class="bar-wrap"><div class="stacked-bar"><div class="seg seg-passed" style="width:99.8%"></div></div></div></div><span class="bar-count">1142✓ 0✗ 2—</span></div>
+<div class="bar-row"><span class="bar-label">Bench</span><div class="bar-container"><div class="bar-wrap"><div class="stacked-bar"><div class="seg seg-qualified" style="width:92.8%"></div><div class="seg seg-underperforming" style="width:7.2%"></div></div></div></div><span class="bar-count">981✓ 76△ 0✗</span></div>
+</div>
+<div class='card'>
+<h2 style='margin-top:0'>Category Progress</h2>
+<div class="cat-card"><div class="cat-bars">
+<h3 style="margin-bottom:.35rem">Attention (avg ratio: 1352%)</h3>
+<div class="bar-row"><span class="bar-label">Test</span><div class="bar-container"><div class="bar-wrap"><div class="stacked-bar"><div class="seg seg-passed" style="width:100.0%"></div></div></div></div><span class="bar-count">7✓ 0✗ / 7 ops</span></div>
+<div class="bar-row"><span class="bar-label">Bench</span><div class="bar-container"><div class="bar-wrap"><div class="stacked-bar"><div class="seg seg-qualified" style="width:62.0%"></div><div class="seg seg-underperforming" style="width:30.4%"></div></div></div></div><span class="bar-count">49✓ 24△ / 79 cfgs</span></div>
+</div><div class="cat-scores">
+<div class="score-badge score-null"><span class="val">—</span>Perf</div>
+<div class="score-badge score-null"><span class="val">—</span>Func</div>
+</div></div>
+<div class="cat-card"><div class="cat-bars">
+<h3 style="margin-bottom:.35rem">Conv (avg ratio: 688%)</h3>
+<div class="bar-row"><span class="bar-label">Test</span><div class="bar-container"><div class="bar-wrap"><div class="stacked-bar"><div class="seg seg-passed" style="width:100.0%"></div></div></div></div><span class="bar-count">3✓ 0✗ / 3 ops</span></div>
+<div class="bar-row"><span class="bar-label">Bench</span><div class="bar-container"><div class="bar-wrap"><div class="stacked-bar"><div class="seg seg-qualified" style="width:100.0%"></div></div></div></div><span class="bar-count">55✓ 0△ / 55 cfgs</span></div>
+</div><div class="cat-scores">
+<div class="score-badge score-null"><span class="val">—</span>Perf</div>
+<div class="score-badge score-null"><span class="val">—</span>Func</div>
+</div></div>
+<div class="cat-card"><div class="cat-bars">
+<h3 style="margin-bottom:.35rem">Dropout (avg ratio: 176%)</h3>
+<div class="bar-row"><span class="bar-label">Bench</span><div class="bar-container"><div class="bar-wrap"><div class="stacked-bar"><div class="seg seg-qualified" style="width:100.0%"></div></div></div></div><span class="bar-count">3✓ 0△ / 3 cfgs</span></div>
+</div><div class="cat-scores">
+<div class="score-badge score-null"><span class="val">—</span>Perf</div>
+<div class="score-badge score-null"><span class="val">—</span>Func</div>
+</div></div>
+<div class="cat-card"><div class="cat-bars">
+<h3 style="margin-bottom:.35rem">Elementwise (avg ratio: 179%)</h3>
+<div class="bar-row"><span class="bar-label">Test</span><div class="bar-container"><div class="bar-wrap"><div class="stacked-bar"><div class="seg seg-passed" style="width:100.0%"></div></div></div></div><span class="bar-count">10✓ 0✗ / 10 ops</span></div>
+<div class="bar-row"><span class="bar-label">Bench</span><div class="bar-container"><div class="bar-wrap"><div class="stacked-bar"><div class="seg seg-qualified" style="width:100.0%"></div></div></div></div><span class="bar-count">401✓ 0△ / 401 cfgs</span></div>
+</div><div class="cat-scores">
+<div class="score-badge score-null"><span class="val">—</span>Perf</div>
+<div class="score-badge score-null"><span class="val">—</span>Func</div>
+</div></div>
+<div class="cat-card"><div class="cat-bars">
+<h3 style="margin-bottom:.35rem">GEMM (avg ratio: 510%)</h3>
+<div class="bar-row"><span class="bar-label">Test</span><div class="bar-container"><div class="bar-wrap"><div class="stacked-bar"><div class="seg seg-passed" style="width:100.0%"></div></div></div></div><span class="bar-count">6✓ 0✗ / 6 ops</span></div>
+<div class="bar-row"><span class="bar-label">Bench</span><div class="bar-container"><div class="bar-wrap"><div class="stacked-bar"><div class="seg seg-qualified" style="width:95.5%"></div><div class="seg seg-underperforming" style="width:4.5%"></div></div></div></div><span class="bar-count">64✓ 3△ / 67 cfgs</span></div>
+</div><div class="cat-scores">
+<div class="score-badge score-null"><span class="val">—</span>Perf</div>
+<div class="score-badge score-null"><span class="val">—</span>Func</div>
+</div></div>
+<div class="cat-card"><div class="cat-bars">
+<h3 style="margin-bottom:.35rem">MoE (avg ratio: 202%)</h3>
+<div class="bar-row"><span class="bar-label">Bench</span><div class="bar-container"><div class="bar-wrap"><div class="stacked-bar"><div class="seg seg-qualified" style="width:96.2%"></div><div class="seg seg-underperforming" style="width:3.8%"></div></div></div></div><span class="bar-count">50✓ 2△ / 52 cfgs</span></div>
+</div><div class="cat-scores">
+<div class="score-badge score-null"><span class="val">—</span>Perf</div>
+<div class="score-badge score-null"><span class="val">—</span>Func</div>
+</div></div>
+<div class="cat-card"><div class="cat-bars">
+<h3 style="margin-bottom:.35rem">Norm (avg ratio: 169%)</h3>
+<div class="bar-row"><span class="bar-label">Test</span><div class="bar-container"><div class="bar-wrap"><div class="stacked-bar"><div class="seg seg-passed" style="width:100.0%"></div></div></div></div><span class="bar-count">8✓ 0✗ / 8 ops</span></div>
+<div class="bar-row"><span class="bar-label">Bench</span><div class="bar-container"><div class="bar-wrap"><div class="stacked-bar"><div class="seg seg-qualified" style="width:92.8%"></div><div class="seg seg-underperforming" style="width:7.2%"></div></div></div></div><span class="bar-count">64✓ 5△ / 69 cfgs</span></div>
+</div><div class="cat-scores">
+<div class="score-badge score-null"><span class="val">—</span>Perf</div>
+<div class="score-badge score-null"><span class="val">—</span>Func</div>
+</div></div>
+<div class="cat-card"><div class="cat-bars">
+<h3 style="margin-bottom:.35rem">Other (avg ratio: 262%)</h3>
+<div class="bar-row"><span class="bar-label">Test</span><div class="bar-container"><div class="bar-wrap"><div class="stacked-bar"><div class="seg seg-passed" style="width:100.0%"></div></div></div></div><span class="bar-count">24✓ 0✗ / 24 ops</span></div>
+<div class="bar-row"><span class="bar-label">Bench</span><div class="bar-container"><div class="bar-wrap"><div class="stacked-bar"><div class="seg seg-qualified" style="width:82.8%"></div><div class="seg seg-underperforming" style="width:17.2%"></div></div></div></div><span class="bar-count">188✓ 39△ / 227 cfgs</span></div>
+</div><div class="cat-scores">
+<div class="score-badge score-null"><span class="val">—</span>Perf</div>
+<div class="score-badge score-null"><span class="val">—</span>Func</div>
+</div></div>
+<div class="cat-card"><div class="cat-bars">
+<h3 style="margin-bottom:.35rem">Quantize (avg ratio: 4927%)</h3>
+<div class="bar-row"><span class="bar-label">Test</span><div class="bar-container"><div class="bar-wrap"><div class="stacked-bar"><div class="seg seg-passed" style="width:100.0%"></div></div></div></div><span class="bar-count">2✓ 0✗ / 2 ops</span></div>
+<div class="bar-row"><span class="bar-label">Bench</span><div class="bar-container"><div class="bar-wrap"><div class="stacked-bar"><div class="seg seg-qualified" style="width:100.0%"></div></div></div></div><span class="bar-count">4✓ 0△ / 4 cfgs</span></div>
+</div><div class="cat-scores">
+<div class="score-badge score-null"><span class="val">—</span>Perf</div>
+<div class="score-badge score-null"><span class="val">—</span>Func</div>
+</div></div>
+<div class="cat-card"><div class="cat-bars">
+<h3 style="margin-bottom:.35rem">Reduction (avg ratio: 637%)</h3>
+<div class="bar-row"><span class="bar-label">Test</span><div class="bar-container"><div class="bar-wrap"><div class="stacked-bar"><div class="seg seg-passed" style="width:100.0%"></div></div></div></div><span class="bar-count">21✓ 0✗ / 21 ops</span></div>
+<div class="bar-row"><span class="bar-label">Bench</span><div class="bar-container"><div class="bar-wrap"><div class="stacked-bar"><div class="seg seg-qualified" style="width:100.0%"></div></div></div></div><span class="bar-count">90✓ 0△ / 90 cfgs</span></div>
+</div><div class="cat-scores">
+<div class="score-badge score-null"><span class="val">—</span>Perf</div>
+<div class="score-badge score-null"><span class="val">—</span>Func</div>
+</div></div>
+<div class="cat-card"><div class="cat-bars">
+<h3 style="margin-bottom:.35rem">Transform (avg ratio: 660%)</h3>
+<div class="bar-row"><span class="bar-label">Test</span><div class="bar-container"><div class="bar-wrap"><div class="stacked-bar"><div class="seg seg-passed" style="width:100.0%"></div></div></div></div><span class="bar-count">6✓ 0✗ / 6 ops</span></div>
+<div class="bar-row"><span class="bar-label">Bench</span><div class="bar-container"><div class="bar-wrap"><div class="stacked-bar"><div class="seg seg-qualified" style="width:81.2%"></div><div class="seg seg-underperforming" style="width:18.8%"></div></div></div></div><span class="bar-count">13✓ 3△ / 16 cfgs</span></div>
+</div><div class="cat-scores">
+<div class="score-badge score-null"><span class="val">—</span>Perf</div>
+<div class="score-badge score-null"><span class="val">—</span>Func</div>
+</div></div>
+</div>
+<div class='card'>
+<h2 style='margin-top:0'>Baseline Alerts (76 configs &lt; 80%)</h2>
+<table class="data-table"><thead><tr>
+<th>Op</th><th>Config</th><th>TileOPs (ms)</th><th>Baseline (ms)</th><th>Ratio</th><th>Via</th>
+</tr></thead><tbody>
+<tr><td><strong>MultiHeadAttentionBwdOp</strong></td><td style="font-size:.75rem">test_mha_bwd_bench[llama-70b-short-bfloat16]</td><td>0.4664</td><td>0.5045</td><td><span class="badge badge-red">31%</span></td><td>fa3</td></tr>
+<tr><td><strong>MultiHeadAttentionBwdOp</strong></td><td style="font-size:.75rem">test_mha_bwd_bench[llama-8b-short-bfloat16]</td><td>0.4637</td><td>0.5502</td><td><span class="badge badge-red">31%</span></td><td>fa3</td></tr>
+<tr><td><strong>FFTC2CFwdOp</strong></td><td style="font-size:.75rem">test_fft_bench[fft-4k-c64-b64-complex64]</td><td>0.2148</td><td>0.0056</td><td><span class="badge badge-red">37%</span></td><td>torch-cufft</td></tr>
+<tr><td><strong>GroupedQueryAttentionBwdOp</strong></td><td style="font-size:.75rem">test_gqa_bwd_bench[llama-70b-short-bfloat16]</td><td>0.4180</td><td>0.6182</td><td><span class="badge badge-red">39%</span></td><td>fa3</td></tr>
+<tr><td><strong>GroupedQueryAttentionBwdOp</strong></td><td style="font-size:.75rem">test_gqa_bwd_bench[llama-8b-short-bfloat16]</td><td>0.4234</td><td>0.6133</td><td><span class="badge badge-red">40%</span></td><td>fa3</td></tr>
+<tr><td><strong>MultiHeadAttentionBwdOp</strong></td><td style="font-size:.75rem">test_mha_bwd_bench[llama-8b-long-bfloat16]</td><td>1.3214</td><td>0.8111</td><td><span class="badge badge-red">42%</span></td><td>fa3</td></tr>
+<tr><td><strong>FFTC2CFwdOp</strong></td><td style="font-size:.75rem">test_fft_bench[fft-4k-c128-b64-complex128]</td><td>0.1831</td><td>0.0085</td><td><span class="badge badge-red">42%</span></td><td>torch-cufft</td></tr>
+<tr><td><strong>GroupedQueryAttentionBwdOp</strong></td><td style="font-size:.75rem">test_gqa_bwd_bench[llama-8b-long-bfloat16]</td><td>1.2517</td><td>0.9854</td><td><span class="badge badge-red">48%</span></td><td>fa3</td></tr>
+<tr><td><strong>GroupedQueryAttentionDecodePagedWithKVCacheFwdOp</strong></td><td style="font-size:.75rem">test_gqa_decode_paged_bench[serving-8b-p256-float16]</td><td>0.5375</td><td>0.0979</td><td><span class="badge badge-red">49%</span></td><td>fa3</td></tr>
+<tr><td><strong>GroupedQueryAttentionDecodePagedWithKVCacheFwdOp</strong></td><td style="font-size:.75rem">test_gqa_decode_paged_bench[serving-405b-p256-float16]</td><td>0.4302</td><td>0.0481</td><td><span class="badge badge-red">50%</span></td><td>fa3</td></tr>
+<tr><td><strong>MultiHeadAttentionBwdOp</strong></td><td style="font-size:.75rem">test_mha_bwd_bench[llama-70b-long-bfloat16]</td><td>1.1145</td><td>0.8729</td><td><span class="badge badge-red">50%</span></td><td>fa3</td></tr>
+<tr><td><strong>DaCumsumFwdOp</strong></td><td style="font-size:.75rem">test_da_cumsum_fwd_bench[mamba2-2p7b-b2-s32k-dt-bias-float16]</td><td>0.0444</td><td>0.0223</td><td><span class="badge badge-red">50%</span></td><td>mamba</td></tr>
+<tr><td><strong>DaCumsumFwdOp</strong></td><td style="font-size:.75rem">test_da_cumsum_fwd_bench[mamba2-1p3b-b8-s2k-dt-bias-bfloat16]</td><td>0.0124</td><td>0.0064</td><td><span class="badge badge-red">52%</span></td><td>mamba</td></tr>
+<tr><td><strong>GemmW4A16FwdOp</strong></td><td style="font-size:.75rem">test_gemm_w4a16_bench[compile-smoke-rect-128x256x256-float16]</td><td>0.0059</td><td>0.0031</td><td><span class="badge badge-red">52%</span></td><td>torch-dequantized-matmul</td></tr>
+<tr><td><strong>DaCumsumFwdOp</strong></td><td style="font-size:.75rem">test_da_cumsum_fwd_bench[mamba2-1p3b-b8-s2k-bfloat16]</td><td>0.0121</td><td>0.0064</td><td><span class="badge badge-red">53%</span></td><td>mamba</td></tr>
+<tr><td><strong>GroupedQueryAttentionDecodePagedWithKVCacheFwdOp</strong></td><td style="font-size:.75rem">test_gqa_decode_paged_bench[serving-70b-p256-float16]</td><td>0.4562</td><td>0.0533</td><td><span class="badge badge-red">55%</span></td><td>fa3</td></tr>
+<tr><td><strong>GroupedQueryAttentionBwdOp</strong></td><td style="font-size:.75rem">test_gqa_bwd_bench[llama-70b-long-bfloat16]</td><td>1.0278</td><td>0.9621</td><td><span class="badge badge-red">57%</span></td><td>fa3</td></tr>
+<tr><td><strong>MultiHeadAttentionBwdOp</strong></td><td style="font-size:.75rem">test_mha_bwd_bench[llama-8b-short-float16]</td><td>0.3093</td><td>0.4946</td><td><span class="badge badge-red">58%</span></td><td>fa3</td></tr>
+<tr><td><strong>MultiHeadAttentionBwdOp</strong></td><td style="font-size:.75rem">test_mha_bwd_bench[llama-70b-short-float16]</td><td>0.3816</td><td>0.5087</td><td><span class="badge badge-red">59%</span></td><td>fa3</td></tr>
+<tr><td><strong>GroupedQueryAttentionDecodePagedWithKVCacheFwdOp</strong></td><td style="font-size:.75rem">test_gqa_decode_paged_bench[throughput-8b-p64-float16]</td><td>0.6338</td><td>0.1507</td><td><span class="badge badge-red">61%</span></td><td>flashinfer</td></tr>
+<tr><td><strong>MultiHeadAttentionBwdOp</strong></td><td style="font-size:.75rem">test_mha_bwd_bench[llama-8b-long-float16]</td><td>0.9964</td><td>0.8201</td><td><span class="badge badge-red">61%</span></td><td>fa3</td></tr>
+<tr><td><strong>GatedDeltaNetBHTDFwdOp</strong></td><td style="font-size:.75rem">test_gated_deltanet_bhtd_vs_fla_fwd[gdn-bhtd-b2-s16k-h4-d64-float16]</td><td>0.8116</td><td>0.6737</td><td><span class="badge badge-red">61%</span></td><td>fla</td></tr>
+<tr><td><strong>GatedDeltaNetBHTDFwdOp</strong></td><td style="font-size:.75rem">test_gated_deltanet_bhtd_vs_fla_fwd[gdn-bhtd-b2-s16k-h4-d64-bfloat16]</td><td>0.8136</td><td>0.6606</td><td><span class="badge badge-red">62%</span></td><td>fla</td></tr>
+<tr><td><strong>MultiHeadAttentionBwdOp</strong></td><td style="font-size:.75rem">test_mha_bwd_bench[llama-70b-long-float16]</td><td>1.0056</td><td>0.8111</td><td><span class="badge badge-red">62%</span></td><td>fa3</td></tr>
+<tr><td><strong>GemmW4A16FwdOp</strong></td><td style="font-size:.75rem">test_gemm_w4a16_bench[compile-smoke-square-64x64x128-float16]</td><td>0.0042</td><td>0.0027</td><td><span class="badge badge-red">64%</span></td><td>torch-dequantized-matmul</td></tr>
+<tr><td><strong>GatedDeltaNetBwdOp</strong></td><td style="font-size:.75rem">test_gated_deltanet_vs_fla_bwd[gdn-bwd-b2-s16k-h4-d64-float16]</td><td>1.6293</td><td>1.0849</td><td><span class="badge badge-red">64%</span></td><td>fla</td></tr>
+<tr><td><strong>GatedDeltaNetBHTDFwdOp</strong></td><td style="font-size:.75rem">test_gated_deltanet_bhtd_vs_fla_fwd[gdn-bhtd-b2-s8k-h4-d64-bfloat16]</td><td>0.4905</td><td>0.5415</td><td><span class="badge badge-red">65%</span></td><td>fla</td></tr>
+<tr><td><strong>GatedDeltaNetAutogradOp</strong></td><td style="font-size:.75rem">test_gated_deltanet_vs_fla_autograd[gdn-autograd-b2-s8k-h4-d64-bfloat16]</td><td>0.4982</td><td>0.5430</td><td><span class="badge badge-red">65%</span></td><td>fla</td></tr>
+<tr><td><strong>GatedDeltaNetBwdOp</strong></td><td style="font-size:.75rem">test_gated_deltanet_vs_fla_bwd[gdn-bwd-b2-s16k-h4-d64-bfloat16]</td><td>1.7071</td><td>1.1189</td><td><span class="badge badge-red">65%</span></td><td>fla</td></tr>
+<tr><td><strong>GatedDeltaNetBHTDFwdOp</strong></td><td style="font-size:.75rem">test_gated_deltanet_bhtd_vs_fla_fwd[gdn-bhtd-b2-s8k-h4-d64-float16]</td><td>0.4863</td><td>0.5351</td><td><span class="badge badge-red">65%</span></td><td>fla</td></tr>
+<tr><td><strong>GatedDeltaNetAutogradOp</strong></td><td style="font-size:.75rem">test_gated_deltanet_vs_fla_autograd[gdn-autograd-b2-s8k-h4-d64-float16]</td><td>0.4975</td><td>0.5404</td><td><span class="badge badge-red">65%</span></td><td>fla</td></tr>
+<tr><td><strong>GatedDeltaNetBwdOp</strong></td><td style="font-size:.75rem">test_gated_deltanet_vs_fla_bwd[gdn-bwd-b2-s4k-h4-d64-float16]</td><td>0.6776</td><td>0.9320</td><td><span class="badge badge-red">65%</span></td><td>fla</td></tr>
+<tr><td><strong>FFTC2CFwdOp</strong></td><td style="font-size:.75rem">test_fft_bench[fft-4k-c64-unbatched-complex64]</td><td>0.1310</td><td>0.0053</td><td><span class="badge badge-red">66%</span></td><td>torch-cufft</td></tr>
+<tr><td><strong>GatedDeltaNetBwdOp</strong></td><td style="font-size:.75rem">test_gated_deltanet_vs_fla_bwd[gdn-bwd-b2-s2k-h4-d64-float16]</td><td>0.5173</td><td>0.9365</td><td><span class="badge badge-red">67%</span></td><td>fla</td></tr>
+<tr><td><strong>GatedDeltaNetBwdOp</strong></td><td style="font-size:.75rem">test_gated_deltanet_vs_fla_bwd[gdn-bwd-b2-s4k-h4-d64-bfloat16]</td><td>0.6846</td><td>0.9416</td><td><span class="badge badge-red">67%</span></td><td>fla</td></tr>
+<tr><td><strong>GatedDeltaNetBwdOp</strong></td><td style="font-size:.75rem">test_gated_deltanet_vs_fla_bwd[gdn-bwd-b2-s8k-h4-d64-bfloat16]</td><td>1.0151</td><td>0.9310</td><td><span class="badge badge-red">67%</span></td><td>fla</td></tr>
+<tr><td><strong>GroupNormFwdOp</strong></td><td style="font-size:.75rem">test_group_norm_bench[tail-spatial-g16-affine-float16]</td><td>0.0061</td><td>0.0041</td><td><span class="badge badge-red">67%</span></td><td>flaggems</td></tr>
+<tr><td><strong>GroupNormFwdOp</strong></td><td style="font-size:.75rem">test_group_norm_bench[wider-channel-g32-affine-float16]</td><td>0.0059</td><td>0.0040</td><td><span class="badge badge-red">67%</span></td><td>flaggems</td></tr>
+<tr><td><strong>GatedDeltaNetBwdOp</strong></td><td style="font-size:.75rem">test_gated_deltanet_vs_fla_bwd[gdn-bwd-b2-s8k-h4-d64-float16]</td><td>0.9918</td><td>0.9296</td><td><span class="badge badge-red">67%</span></td><td>fla</td></tr>
+<tr><td><strong>GroupedGemmFwdOp</strong></td><td style="font-size:.75rem">test_grouped_gemm_bench[tn-batch16-m4096-n4096-k4096-float16]</td><td>0.7817</td><td>2.3672</td><td><span class="badge badge-red">67%</span></td><td>torch-ref</td></tr>
+<tr><td><strong>GLAFwdOp</strong></td><td style="font-size:.75rem">test_gla_fwd_bench[gla-noinit-b2-s2k-h4-d64-bfloat16]</td><td>0.1987</td><td>0.3675</td><td><span class="badge badge-red">68%</span></td><td>fla</td></tr>
+<tr><td><strong>GatedDeltaNetBwdOp</strong></td><td style="font-size:.75rem">test_gated_deltanet_vs_fla_bwd[gdn-bwd-b2-s2k-h4-d64-bfloat16]</td><td>0.5183</td><td>0.9603</td><td><span class="badge badge-red">68%</span></td><td>fla</td></tr>
+<tr><td><strong>GroupNormFwdOp</strong></td><td style="font-size:.75rem">test_group_norm_no_affine_bench[tail-spatial-g16-float16]</td><td>0.0052</td><td>0.0036</td><td><span class="badge badge-red">69%</span></td><td>flaggems</td></tr>
+<tr><td><strong>FusedAddRMSNormFwdOp</strong></td><td style="font-size:.75rem">test_fused_add_rms_norm_bench[llama-405b-decode-bfloat16]</td><td>0.0062</td><td>0.0044</td><td><span class="badge badge-red">70%</span></td><td>flashinfer</td></tr>
+<tr><td><strong>MaxPool2dIndicesFwdOp</strong></td><td style="font-size:.75rem">test_max_pool2d_indices_bench[resnet-stem-bfloat16]</td><td>0.1124</td><td>0.0785</td><td><span class="badge badge-red">70%</span></td><td>flaggems</td></tr>
+<tr><td><strong>MaxPool2dIndicesFwdOp</strong></td><td style="font-size:.75rem">test_max_pool2d_indices_bench[resnet-stem-float16]</td><td>0.1124</td><td>0.0785</td><td><span class="badge badge-red">70%</span></td><td>flaggems</td></tr>
+<tr><td><strong>GLAFwdOp</strong></td><td style="font-size:.75rem">test_gla_fwd_bench[gla-noinit-b2-s2k-h4-d64-float16]</td><td>0.1782</td><td>0.3868</td><td><span class="badge badge-red">71%</span></td><td>fla</td></tr>
+<tr><td><strong>SharedFusedMoE</strong></td><td style="font-size:.75rem">test_shared_fused_moe_bench[1-384-8-7168-2048-18432-sigmoid-renormalize-correctionbias-2.827-bfloat16]</td><td>0.9240</td><td>0.8985</td><td><span class="badge badge-red">71%</span></td><td>vllm</td></tr>
+<tr><td><strong>GroupedQueryAttentionBwdOp</strong></td><td style="font-size:.75rem">test_gqa_bwd_bench[llama-8b-long-float16]</td><td>0.9505</td><td>0.9537</td><td><span class="badge badge-red">71%</span></td><td>fa3</td></tr>
+<tr><td><strong>GroupedQueryAttentionBwdOp</strong></td><td style="font-size:.75rem">test_gqa_bwd_bench[llama-70b-long-float16]</td><td>0.9338</td><td>0.9885</td><td><span class="badge badge-red">72%</span></td><td>fa3</td></tr>
+</tbody></table></div>
+<div class='card'>
+<h2 style='margin-top:0'>Performance Regressions (86)</h2>
+<table class="data-table"><thead><tr>
+<th>Op</th><th>Config</th><th>Best (ms)</th><th>Current (ms)</th><th>Delta</th><th>TFLOPS</th>
+</tr></thead><tbody>
+<tr><td><strong>Conv3dFwdOp</strong></td><td style="font-size:.75rem">test_conv3d_bench[video-stage-downsample-k3-s2-bias-float16]</td><td>0.0353</td><td>0.2877</td><td><span class="badge badge-red">+716.0%</span></td><td>63.03</td></tr>
+<tr><td><strong>Conv3dFwdOp</strong></td><td style="font-size:.75rem">test_conv3d_bench[video-stage-downsample-k3-s2-float16]</td><td>0.0349</td><td>0.2233</td><td><span class="badge badge-red">+540.1%</span></td><td>63.29</td></tr>
+<tr><td><strong>LogSumExpFwdOp</strong></td><td style="font-size:.75rem">test_logsumexp_bench[lm-head-logits-float16]</td><td>0.0141</td><td>0.0366</td><td><span class="badge badge-red">+159.9%</span></td><td>0.20</td></tr>
+<tr><td><strong>LogSumExpFwdOp</strong></td><td style="font-size:.75rem">test_logsumexp_bench[lm-head-logits-bfloat16]</td><td>0.0163</td><td>0.0357</td><td><span class="badge badge-red">+118.7%</span></td><td>0.20</td></tr>
+<tr><td><strong>GroupedQueryAttentionSlidingWindowVarlenFwdOp</strong></td><td style="font-size:.75rem">test_gqa_sliding_window_varlen_fwd_bench[llama-8b-short-w256-bfloat16]</td><td>0.3274</td><td>0.6442</td><td><span class="badge badge-red">+96.8%</span></td><td>113.48</td></tr>
+<tr><td><strong>FP8LightningIndexerFwdOp</strong></td><td style="font-size:.75rem">test_fp8_lightning_indexer_bench[lightning-indexer-s8k-h32-d64-bfloat16]</td><td>0.5957</td><td>1.0845</td><td><span class="badge badge-red">+82.1%</span></td><td>55.54</td></tr>
+<tr><td><strong>GroupedQueryAttentionSlidingWindowVarlenFwdOp</strong></td><td style="font-size:.75rem">test_gqa_sliding_window_varlen_fwd_bench[llama-70b-short-w256-bfloat16]</td><td>0.3666</td><td>0.6604</td><td><span class="badge badge-red">+80.1%</span></td><td>139.00</td></tr>
+<tr><td><strong>Conv2dFwdOp</strong></td><td style="font-size:.75rem">test_conv2d_bench[resnet-3x3-bias-bfloat16]</td><td>0.0308</td><td>0.0550</td><td><span class="badge badge-red">+78.7%</span></td><td>33.71</td></tr>
+<tr><td><strong>GroupedQueryAttentionSlidingWindowVarlenFwdOp</strong></td><td style="font-size:.75rem">test_gqa_sliding_window_varlen_fwd_bench[llama-70b-short-w256-float16]</td><td>0.3686</td><td>0.6562</td><td><span class="badge badge-red">+78.0%</span></td><td>138.72</td></tr>
+<tr><td><strong>GroupedQueryAttentionSlidingWindowVarlenFwdOp</strong></td><td style="font-size:.75rem">test_gqa_sliding_window_varlen_fwd_bench[llama-8b-short-w256-float16]</td><td>0.3307</td><td>0.5803</td><td><span class="badge badge-red">+75.5%</span></td><td>113.42</td></tr>
+<tr><td><strong>Conv2dFwdOp</strong></td><td style="font-size:.75rem">test_conv2d_bench[stride2-bias-bfloat16]</td><td>0.0615</td><td>0.1080</td><td><span class="badge badge-red">+75.5%</span></td><td>4.99</td></tr>
+<tr><td><strong>Conv2dFwdOp</strong></td><td style="font-size:.75rem">test_conv2d_bench[stride2-bfloat16]</td><td>0.0289</td><td>0.0499</td><td><span class="badge badge-red">+72.5%</span></td><td>5.19</td></tr>
+<tr><td><strong>Conv2dFwdOp</strong></td><td style="font-size:.75rem">test_conv2d_bench[resnet-3x3-bfloat16]</td><td>0.0299</td><td>0.0510</td><td><span class="badge badge-red">+70.6%</span></td><td>35.68</td></tr>
+<tr><td><strong>Conv2dFwdOp</strong></td><td style="font-size:.75rem">test_conv2d_bench[resnet-3x3-bias-float16]</td><td>0.0298</td><td>0.0504</td><td><span class="badge badge-red">+69.2%</span></td><td>34.93</td></tr>
+<tr><td><strong>Conv2dFwdOp</strong></td><td style="font-size:.75rem">test_conv2d_bench[stage-transition-3x3-s2-float16]</td><td>0.0304</td><td>0.0509</td><td><span class="badge badge-red">+67.8%</span></td><td>33.53</td></tr>
+<tr><td><strong>Conv2dFwdOp</strong></td><td style="font-size:.75rem">test_conv2d_bench[resnet-3x3-float16]</td><td>0.0301</td><td>0.0502</td><td><span class="badge badge-red">+66.5%</span></td><td>35.59</td></tr>
+<tr><td><strong>Conv2dFwdOp</strong></td><td style="font-size:.75rem">test_conv2d_bench[stage-transition-5x5-s2-bias-float16]</td><td>0.0668</td><td>0.1109</td><td><span class="badge badge-red">+65.9%</span></td><td>57.03</td></tr>
+<tr><td><strong>Conv2dFwdOp</strong></td><td style="font-size:.75rem">test_conv2d_bench[midres-5x5-s1-float16]</td><td>0.0328</td><td>0.0528</td><td><span class="badge badge-red">+60.8%</span></td><td>79.64</td></tr>
+<tr><td><strong>FFTC2CFwdOp</strong></td><td style="font-size:.75rem">test_fft_bench[fft-4k-c64-b64-complex64]</td><td>0.1354</td><td>0.2148</td><td><span class="badge badge-red">+58.7%</span></td><td>1.04</td></tr>
+<tr><td><strong>GroupedQueryAttentionPrefillPagedWithKVCacheFwdOp</strong></td><td style="font-size:.75rem">test_gqa_prefill_paged_with_kv_cache_fwd_bench[gqa-prefill-paged-fp8-cache-softcap50-b4-prefix4k-chunk512-p64-float16]</td><td>1.3345</td><td>2.0574</td><td><span class="badge badge-red">+54.2%</span></td><td>88.58</td></tr>
+<tr><td><strong>BatchNormBwdOp</strong></td><td style="font-size:.75rem">test_batch_norm_bwd_bench[resnet50-stage2-float16]</td><td>0.0925</td><td>0.1372</td><td><span class="badge badge-red">+48.3%</span></td><td>0.30</td></tr>
+<tr><td><strong>GroupedQueryAttentionDecodePagedWithKVCacheFwdOp</strong></td><td style="font-size:.75rem">test_gqa_decode_paged_bench[serving-70b-p256-float16]</td><td>0.3117</td><td>0.4562</td><td><span class="badge badge-red">+46.4%</span></td><td>16.07</td></tr>
+<tr><td><strong>Conv2dFwdOp</strong></td><td style="font-size:.75rem">test_conv2d_bench[midres-5x5-s1-bias-float16]</td><td>0.0627</td><td>0.0918</td><td><span class="badge badge-red">+46.4%</span></td><td>77.81</td></tr>
+<tr><td><strong>GroupedQueryAttentionSlidingWindowVarlenFwdOp</strong></td><td style="font-size:.75rem">test_gqa_sliding_window_varlen_fwd_bench[llama-8b-long-w1024-float16]</td><td>0.6271</td><td>0.9109</td><td><span class="badge badge-red">+45.3%</span></td><td>293.20</td></tr>
+<tr><td><strong>Conv2dFwdOp</strong></td><td style="font-size:.75rem">test_conv2d_bench[stage-transition-5x5-s2-float16]</td><td>0.0377</td><td>0.0546</td><td><span class="badge badge-red">+45.0%</span></td><td>57.18</td></tr>
+<tr><td><strong>BatchNormBwdOp</strong></td><td style="font-size:.75rem">test_batch_norm_bwd_bench[resnet50-stage1-float16]</td><td>0.0921</td><td>0.1328</td><td><span class="badge badge-red">+44.2%</span></td><td>0.28</td></tr>
+<tr><td><strong>GroupedQueryAttentionDecodePagedWithKVCacheFwdOp</strong></td><td style="font-size:.75rem">test_gqa_decode_paged_bench[serving-405b-p256-float16]</td><td>0.3052</td><td>0.4302</td><td><span class="badge badge-red">+41.0%</span></td><td>20.02</td></tr>
+<tr><td><strong>BatchNormBwdOp</strong></td><td style="font-size:.75rem">test_batch_norm_bwd_bench[resnet50-stage3-float16]</td><td>0.0928</td><td>0.1287</td><td><span class="badge badge-red">+38.7%</span></td><td>0.38</td></tr>
+<tr><td><strong>GroupedQueryAttentionPrefillPagedWithKVCacheFwdOp</strong></td><td style="font-size:.75rem">test_gqa_prefill_paged_with_kv_cache_fwd_bench[gqa-prefill-paged-softcap50-b4-prefix4k-chunk512-p64-float16]</td><td>0.9116</td><td>1.2126</td><td><span class="badge badge-red">+33.0%</span></td><td>121.77</td></tr>
+<tr><td><strong>FFTC2CFwdOp</strong></td><td style="font-size:.75rem">test_fft_bench[fft-4k-c128-b64-complex128]</td><td>0.1388</td><td>0.1831</td><td><span class="badge badge-red">+31.9%</span></td><td>0.77</td></tr>
+<tr><td><strong>GroupedQueryAttentionSlidingWindowVarlenFwdOp</strong></td><td style="font-size:.75rem">test_gqa_sliding_window_varlen_fwd_bench[llama-70b-long-w1024-bfloat16]</td><td>0.9514</td><td>1.2514</td><td><span class="badge badge-red">+31.5%</span></td><td>309.06</td></tr>
+<tr><td><strong>GatedDeltaNetBHTDFwdOp</strong></td><td style="font-size:.75rem">test_gated_deltanet_bhtd_vs_fla_fwd[gdn-bhtd-b2-s2k-h4-d64-float16]</td><td>0.2260</td><td>0.2956</td><td><span class="badge badge-red">+30.8%</span></td><td>12.40</td></tr>
+<tr><td><strong>SharedFusedMoE</strong></td><td style="font-size:.75rem">test_shared_fused_moe_bench[1-384-8-7168-2048-18432-sigmoid-renormalize-correctionbias-2.827-bfloat16]</td><td>0.7098</td><td>0.9240</td><td><span class="badge badge-red">+30.2%</span></td><td>2.50</td></tr>
+<tr><td><strong>GroupedQueryAttentionSlidingWindowVarlenFwdOp</strong></td><td style="font-size:.75rem">test_gqa_sliding_window_varlen_fwd_bench[llama-8b-long-w1024-bfloat16]</td><td>0.6272</td><td>0.8156</td><td><span class="badge badge-red">+30.0%</span></td><td>294.67</td></tr>
+<tr><td><strong>GroupedQueryAttentionDecodePagedWithKVCacheFwdOp</strong></td><td style="font-size:.75rem">test_gqa_decode_paged_bench[serving-70b-p64-float16]</td><td>0.2975</td><td>0.3855</td><td><span class="badge badge-red">+29.6%</span></td><td>21.84</td></tr>
+<tr><td><strong>GLAFwdOp</strong></td><td style="font-size:.75rem">test_gla_fwd_bench[gla-noinit-b2-s2k-h4-d64-bfloat16]</td><td>0.1543</td><td>0.1987</td><td><span class="badge badge-red">+28.8%</span></td><td>1.38</td></tr>
+<tr><td><strong>GroupedQueryAttentionDecodePagedWithKVCacheFwdOp</strong></td><td style="font-size:.75rem">test_gqa_decode_paged_bench[serving-8b-p256-float16]</td><td>0.4184</td><td>0.5375</td><td><span class="badge badge-red">+28.5%</span></td><td>12.98</td></tr>
+<tr><td><strong>GatedDeltaNetPrefillBHTDFwdOp</strong></td><td style="font-size:.75rem">test_gated_deltanet_prefill_bhtd_bench[bhtd-fallback-gdn-prefill-b1-s4k-h16-d128-bfloat16]</td><td>0.3924</td><td>0.4986</td><td><span class="badge badge-red">+27.1%</span></td><td>34.02</td></tr>
+<tr><td><strong>GroupedQueryAttentionPrefillPagedWithKVCacheFwdOp</strong></td><td style="font-size:.75rem">test_gqa_prefill_paged_with_kv_cache_fwd_bench[llama-8b-prefill-paged-fp8-cache-b8-prefix4k-chunk512-p64-float16]</td><td>3.0770</td><td>3.9004</td><td><span class="badge badge-red">+26.8%</span></td><td>145.92</td></tr>
+<tr><td><strong>GroupedQueryAttentionDecodePagedWithKVCacheFwdOp</strong></td><td style="font-size:.75rem">test_gqa_decode_paged_bench[serving-8b-p64-softcap50-float16]</td><td>0.4373</td><td>0.5545</td><td><span class="badge badge-red">+26.8%</span></td><td>12.34</td></tr>
+<tr><td><strong>GroupedQueryAttentionPrefillFwdOp</strong></td><td style="font-size:.75rem">test_gqa_prefill_fp8_tensor_core_bench[llama-8b-prefill-fp8tc-bn224-s896-bfloat16]</td><td>0.2490</td><td>0.3153</td><td><span class="badge badge-red">+26.6%</span></td><td>290.29</td></tr>
+<tr><td><strong>MultiHeadAttentionBwdOp</strong></td><td style="font-size:.75rem">test_mha_bwd_bench[llama-70b-short-float16]</td><td>0.3026</td><td>0.3816</td><td><span class="badge badge-red">+26.1%</span></td><td>87.89</td></tr>
+<tr><td><strong>GroupedQueryAttentionDecodePagedWithKVCacheFwdOp</strong></td><td style="font-size:.75rem">test_gqa_decode_paged_bench[serving-8b-long-p64-float16]</td><td>0.4813</td><td>0.6060</td><td><span class="badge badge-red">+25.9%</span></td><td>19.72</td></tr>
+<tr><td><strong>DeltaNetFwdOp</strong></td><td style="font-size:.75rem">test_deltanet_vs_fla_fwd[dn-b2-s2k-h4-d64-bfloat16]</td><td>0.1326</td><td>0.1663</td><td><span class="badge badge-red">+25.4%</span></td><td>2.13</td></tr>
+<tr><td><strong>GroupedQueryAttentionSlidingWindowVarlenFwdOp</strong></td><td style="font-size:.75rem">test_gqa_sliding_window_varlen_fwd_bench[llama-70b-long-w1024-float16]</td><td>0.9456</td><td>1.1799</td><td><span class="badge badge-red">+24.8%</span></td><td>308.42</td></tr>
+<tr><td><strong>BatchNormBwdOp</strong></td><td style="font-size:.75rem">test_batch_norm_bwd_bench[resnet50-fc-float16]</td><td>0.0947</td><td>0.1173</td><td><span class="badge badge-red">+23.9%</span></td><td>0.00</td></tr>
+<tr><td><strong>Conv2dFwdOp</strong></td><td style="font-size:.75rem">test_conv2d_bench[highres-3x3-s1-bias-float16]</td><td>0.1185</td><td>0.1464</td><td><span class="badge badge-red">+23.5%</span></td><td>282.11</td></tr>
+<tr><td><strong>Conv2dFwdOp</strong></td><td style="font-size:.75rem">test_conv2d_bench[stage-transition-3x3-s2-bias-float16]</td><td>0.0564</td><td>0.0691</td><td><span class="badge badge-red">+22.6%</span></td><td>32.71</td></tr>
+<tr><td><strong>GroupedQueryAttentionDecodePagedWithKVCacheFwdOp</strong></td><td style="font-size:.75rem">test_gqa_decode_paged_bench[throughput-8b-p64-float16]</td><td>0.5184</td><td>0.6338</td><td><span class="badge badge-red">+22.2%</span></td><td>8.63</td></tr>
+<tr><td><strong>GatedDeltaNetBHTDFwdOp</strong></td><td style="font-size:.75rem">test_gated_deltanet_bhtd_vs_fla_fwd[gdn-bhtd-b2-s2k-h4-d64-bfloat16]</td><td>0.2290</td><td>0.2783</td><td><span class="badge badge-red">+21.5%</span></td><td>12.40</td></tr>
+<tr><td><strong>GatedDeltaNetBHTDFwdOp</strong></td><td style="font-size:.75rem">test_gated_deltanet_bhtd_vs_fla_fwd[gdn-bhtd-b2-s4k-h4-d64-bfloat16]</td><td>0.2719</td><td>0.3301</td><td><span class="badge badge-red">+21.4%</span></td><td>14.87</td></tr>
+<tr><td><strong>GatedDeltaNetBTHDFwdOp</strong></td><td style="font-size:.75rem">test_gated_deltanet_vs_fla_fwd[gdn-bthd-b2-s2k-h4-d64-bfloat16]</td><td>0.2244</td><td>0.2690</td><td><span class="badge badge-red">+19.9%</span></td><td>16.17</td></tr>
+<tr><td><strong>BatchNormFwdOp</strong></td><td style="font-size:.75rem">test_batch_norm_fwd_bench[resnet50-stage2-float16]</td><td>0.0692</td><td>0.0828</td><td><span class="badge badge-red">+19.5%</span></td><td>0.49</td></tr>
+<tr><td><strong>Conv3dFwdOp</strong></td><td style="font-size:.75rem">test_conv3d_bench[unet-encoder-k3-s1-bias-bfloat16]</td><td>0.2902</td><td>0.3432</td><td><span class="badge badge-red">+18.3%</span></td><td>123.17</td></tr>
+<tr><td><strong>GatedDeltaNetBHTDFwdOp</strong></td><td style="font-size:.75rem">test_gated_deltanet_bhtd_vs_fla_fwd[gdn-bhtd-b2-s4k-h4-d64-float16]</td><td>0.2777</td><td>0.3277</td><td><span class="badge badge-red">+18.0%</span></td><td>14.44</td></tr>
+<tr><td><strong>GatedDeltaNetPrefillBTHDFwdOp</strong></td><td style="font-size:.75rem">test_gated_deltanet_prefill_fwd_bench[fallback-gdn-prefill-b1-s4k-h16-d128-bthd-bfloat16]</td><td>0.3293</td><td>0.3881</td><td><span class="badge badge-red">+17.9%</span></td><td>108.26</td></tr>
+<tr><td><strong>Conv3dFwdOp</strong></td><td style="font-size:.75rem">test_conv3d_bench[unet-encoder-k3-s1-bfloat16]</td><td>0.2803</td><td>0.3290</td><td><span class="badge badge-red">+17.4%</span></td><td>121.43</td></tr>
+<tr><td><strong>GatedDeltaNetPrefillBTHDFwdOp</strong></td><td style="font-size:.75rem">test_gated_deltanet_prefill_fwd_bench[fallback-gdn-prefill-b1-s4k-h16-d128-bthd-float16]</td><td>0.3276</td><td>0.3831</td><td><span class="badge badge-red">+16.9%</span></td><td>108.42</td></tr>
+<tr><td><strong>Mamba2FwdOp</strong></td><td style="font-size:.75rem">test_mamba2_fwd_bench[mamba2-2p7b-b1-s2k-dt-bias-init-states-bfloat16]</td><td>0.4488</td><td>0.5219</td><td><span class="badge badge-red">+16.3%</span></td><td>74.16</td></tr>
+<tr><td><strong>GatedDeltaNetBTHDFwdOp</strong></td><td style="font-size:.75rem">test_gated_deltanet_vs_fla_fwd[gdn-bthd-b2-s32k-h4-d64-bfloat16]</td><td>0.4116</td><td>0.4758</td><td><span class="badge badge-red">+15.6%</span></td><td>87.64</td></tr>
+<tr><td><strong>GatedDeltaNetBTHDFwdOp</strong></td><td style="font-size:.75rem">test_gated_deltanet_vs_fla_fwd[gdn-bthd-b1-s4k-h16-d128-bfloat16]</td><td>0.3111</td><td>0.3595</td><td><span class="badge badge-red">+15.5%</span></td><td>58.54</td></tr>
+<tr><td><strong>GatedDeltaNetBTHDFwdOp</strong></td><td style="font-size:.75rem">test_gated_deltanet_vs_fla_fwd[gdn-bthd-b2-s4k-h4-d64-float16]</td><td>0.2720</td><td>0.3128</td><td><span class="badge badge-red">+15.0%</span></td><td>18.68</td></tr>
+<tr><td><strong>GLAFwdOp</strong></td><td style="font-size:.75rem">test_gla_fwd_bench[gla-noinit-b2-s2k-h4-d64-float16]</td><td>0.1551</td><td>0.1782</td><td><span class="badge badge-red">+14.9%</span></td><td>1.37</td></tr>
+<tr><td><strong>GLAFwdOp</strong></td><td style="font-size:.75rem">test_gla_fwd_bench[gla-init-b2-s4k-h4-d64-bfloat16]</td><td>0.1791</td><td>0.2049</td><td><span class="badge badge-red">+14.4%</span></td><td>1.72</td></tr>
+<tr><td><strong>GatedDeltaNetBwdOp</strong></td><td style="font-size:.75rem">test_gated_deltanet_vs_fla_bwd[gdn-bwd-b2-s2k-h4-d64-float16]</td><td>0.4528</td><td>0.5173</td><td><span class="badge badge-red">+14.3%</span></td><td>1.33</td></tr>
+<tr><td><strong>GatedDeltaNetBwdOp</strong></td><td style="font-size:.75rem">test_gated_deltanet_vs_fla_bwd[gdn-bwd-b2-s4k-h4-d64-float16]</td><td>0.5957</td><td>0.6776</td><td><span class="badge badge-red">+13.7%</span></td><td>1.41</td></tr>
+<tr><td><strong>GroupedQueryAttentionPrefillFwdOp</strong></td><td style="font-size:.75rem">test_gqa_prefill_fp8_tensor_core_bench[llama-8b-prefill-fp8tc-bn224-s1792-float16]</td><td>0.3536</td><td>0.4001</td><td><span class="badge badge-red">+13.1%</span></td><td>407.88</td></tr>
+<tr><td><strong>DeltaNetFwdOp</strong></td><td style="font-size:.75rem">test_deltanet_vs_fla_fwd[dn-b2-s4k-h4-d64-float16]</td><td>0.1634</td><td>0.1828</td><td><span class="badge badge-red">+11.8%</span></td><td>2.45</td></tr>
+<tr><td><strong>Mamba2FwdOp</strong></td><td style="font-size:.75rem">test_mamba2_fwd_bench[mamba2-2p7b-b1-s2k-init-states-bfloat16]</td><td>0.4678</td><td>0.5228</td><td><span class="badge badge-red">+11.8%</span></td><td>74.21</td></tr>
+<tr><td><strong>Mamba2FwdOp</strong></td><td style="font-size:.75rem">test_mamba2_fwd_bench[mamba2-1p3b-b1-s8k-dt-bias-init-states-float16]</td><td>0.5699</td><td>0.6368</td><td><span class="badge badge-red">+11.7%</span></td><td>90.33</td></tr>
+<tr><td><strong>Mamba2FwdOp</strong></td><td style="font-size:.75rem">test_mamba2_fwd_bench[mamba2-2p7b-b1-s2k-dt-bias-bfloat16]</td><td>0.4695</td><td>0.5241</td><td><span class="badge badge-red">+11.6%</span></td><td>74.56</td></tr>
+<tr><td><strong>GatedDeltaNetBHTDFwdOp</strong></td><td style="font-size:.75rem">test_gated_deltanet_bhtd_vs_fla_fwd[gdn-bhtd-b2-s8k-h4-d64-bfloat16]</td><td>0.4399</td><td>0.4905</td><td><span class="badge badge-red">+11.5%</span></td><td>13.56</td></tr>
+<tr><td><strong>GatedDeltaNetPrefillBHTDFwdOp</strong></td><td style="font-size:.75rem">test_gated_deltanet_prefill_bhtd_bench[bhtd-fallback-gdn-prefill-b1-s4k-h16-d128-float16]</td><td>0.3919</td><td>0.4370</td><td><span class="badge badge-red">+11.5%</span></td><td>34.24</td></tr>
+<tr><td><strong>Mamba2FwdOp</strong></td><td style="font-size:.75rem">test_mamba2_fwd_bench[mamba2-1p3b-b1-s8k-init-states-float16]</td><td>0.5689</td><td>0.6341</td><td><span class="badge badge-red">+11.5%</span></td><td>90.28</td></tr>
+<tr><td><strong>DeltaNetFwdOp</strong></td><td style="font-size:.75rem">test_deltanet_vs_fla_fwd[dn-b2-s2k-h4-d64-float16]</td><td>0.1278</td><td>0.1422</td><td><span class="badge badge-red">+11.2%</span></td><td>2.14</td></tr>
+<tr><td><strong>GatedDeltaNetBTHDFwdOp</strong></td><td style="font-size:.75rem">test_gated_deltanet_vs_fla_fwd[gdn-bthd-b2-s32k-h4-d64-float16]</td><td>0.4102</td><td>0.4562</td><td><span class="badge badge-red">+11.2%</span></td><td>88.07</td></tr>
+<tr><td><strong>GroupedQueryAttentionDecodePagedWithKVCacheFwdOp</strong></td><td style="font-size:.75rem">test_gqa_decode_paged_bench[serving-8b-p64-float16]</td><td>0.4336</td><td>0.4818</td><td><span class="badge badge-red">+11.1%</span></td><td>12.97</td></tr>
+<tr><td><strong>DeltaNetFwdOp</strong></td><td style="font-size:.75rem">test_deltanet_vs_fla_fwd[dn-b2-s8k-h4-d64-float16]</td><td>0.2844</td><td>0.3159</td><td><span class="badge badge-red">+11.1%</span></td><td>2.29</td></tr>
+<tr><td><strong>GatedDeltaNetBHTDFwdOp</strong></td><td style="font-size:.75rem">test_gated_deltanet_bhtd_vs_fla_fwd[gdn-bhtd-b2-s8k-h4-d64-float16]</td><td>0.4381</td><td>0.4863</td><td><span class="badge badge-red">+11.0%</span></td><td>13.67</td></tr>
+<tr><td><strong>GatedDeltaNetBwdOp</strong></td><td style="font-size:.75rem">test_gated_deltanet_vs_fla_bwd[gdn-bwd-b2-s4k-h4-d64-bfloat16]</td><td>0.6175</td><td>0.6846</td><td><span class="badge badge-red">+10.9%</span></td><td>1.38</td></tr>
+<tr><td><strong>GroupedQueryAttentionPrefillFwdOp</strong></td><td style="font-size:.75rem">test_gqa_prefill_fp8_tensor_core_bench[llama-8b-prefill-fp8tc-bn224-s896-float16]</td><td>0.2490</td><td>0.2756</td><td><span class="badge badge-red">+10.7%</span></td><td>289.67</td></tr>
+<tr><td><strong>GatedDeltaNetBwdOp</strong></td><td style="font-size:.75rem">test_gated_deltanet_vs_fla_bwd[gdn-bwd-b2-s2k-h4-d64-bfloat16]</td><td>0.4680</td><td>0.5183</td><td><span class="badge badge-red">+10.7%</span></td><td>1.31</td></tr>
+<tr><td><strong>Mamba2FwdOp</strong></td><td style="font-size:.75rem">test_mamba2_fwd_bench[mamba2-1p3b-b1-s8k-dt-bias-float16]</td><td>0.5769</td><td>0.6388</td><td><span class="badge badge-red">+10.7%</span></td><td>90.34</td></tr>
+<tr><td><strong>GLABwdOp</strong></td><td style="font-size:.75rem">test_gla_bwd_bench[gla-bwd-b2-s2k-h4-d64-bfloat16]</td><td>0.2294</td><td>0.2537</td><td><span class="badge badge-red">+10.6%</span></td><td>1.46</td></tr>
+<tr><td><strong>GatedDeltaNetBwdOp</strong></td><td style="font-size:.75rem">test_gated_deltanet_vs_fla_bwd[gdn-bwd-b2-s8k-h4-d64-bfloat16]</td><td>0.9212</td><td>1.0151</td><td><span class="badge badge-red">+10.2%</span></td><td>1.43</td></tr>
+<tr><td><strong>GLABwdOp</strong></td><td style="font-size:.75rem">test_gla_bwd_bench[gla-bwd-b2-s2k-h4-d64-float16]</td><td>0.2271</td><td>0.2502</td><td><span class="badge badge-red">+10.2%</span></td><td>1.47</td></tr>
+</tbody></table></div>
+<div class='card'>
+<h2 style='margin-top:0'>Overall Assessment</h2>
+<p style='font-size:.88rem;line-height:1.6'>No analysis available.</p>
+</div>
+<p style='text-align:center;color:var(--muted);font-size:.72rem;margin-top:1.5rem'>
+Generated by Claude &mdash; review for accuracy before acting on recommendations.
+</p>
+</body></html>

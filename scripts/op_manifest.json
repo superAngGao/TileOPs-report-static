@@ -1,0 +1,306 @@
+{
+  "version": "1.0",
+  "total_ops": 186,
+  "note": "op_classes: any one existing = implemented. test_fns: any matching passed test = tested.",
+  "categories": [
+    {
+      "id": 1,
+      "name": "Elementwise",
+      "issue": 397,
+      "difficulty": 1,
+      "ops": [
+        {"id":"ew.binary_arith.add",           "name":"add",              "sub":"binary_arith",          "op_classes":["AddOp"],             "test_fns":["test_add_same_shape","test_add_broadcast","test_add_strategies"], "bench_file":"benchmarks/ops/bench_binary_arith.py"},
+        {"id":"ew.binary_arith.sub",           "name":"sub",              "sub":"binary_arith",          "op_classes":["SubOp"],             "test_fns":["test_sub_op"],                                                    "bench_file":"benchmarks/ops/bench_binary_arith.py"},
+        {"id":"ew.binary_arith.mul",           "name":"mul",              "sub":"binary_arith",          "op_classes":["MulOp"],             "test_fns":["test_mul_op"],                                                    "bench_file":"benchmarks/ops/bench_binary_arith.py"},
+        {"id":"ew.binary_arith.div",           "name":"div",              "sub":"binary_arith",          "op_classes":["DivOp"],             "test_fns":["test_div_op"],                                                    "bench_file":"benchmarks/ops/bench_binary_arith.py"},
+        {"id":"ew.binary_arith.remainder",     "name":"remainder",        "sub":"binary_arith",          "op_classes":["RemainderOp"],        "test_fns":["test_remainder_op"],                                              "bench_file":"benchmarks/ops/bench_binary_arith.py"},
+        {"id":"ew.binary_arith.pow",           "name":"pow",              "sub":"binary_arith",          "op_classes":["PowOp"],             "test_fns":["test_pow_op"],                                                    "bench_file":"benchmarks/ops/bench_binary_arith.py"},
+        {"id":"ew.binary_arith.floor_divide",  "name":"floor_divide",     "sub":"binary_arith",          "op_classes":["FloorDivideOp"],     "test_fns":["test_floor_divide_op"],                                           "bench_file":"benchmarks/ops/bench_binary_arith.py"},
+        {"id":"ew.binary_arith.lerp",          "name":"lerp",             "sub":"binary_arith",          "op_classes":["LerpOp"],            "test_fns":["test_lerp_op"],                                                   "bench_file":"benchmarks/ops/bench_binary_arith.py"},
+        {"id":"ew.binary_arith.maximum",       "name":"maximum",          "sub":"binary_arith",          "op_classes":["MaximumOp"],         "test_fns":["test_maximum_op","test_maximum_nan_propagation"],                 "bench_file":"benchmarks/ops/bench_binary_arith.py"},
+        {"id":"ew.binary_arith.minimum",       "name":"minimum",          "sub":"binary_arith",          "op_classes":["MinimumOp"],         "test_fns":["test_minimum_op","test_minimum_nan_propagation"],                 "bench_file":"benchmarks/ops/bench_binary_arith.py"},
+
+        {"id":"ew.unary_math.exp",             "name":"exp",              "sub":"unary_math",            "op_classes":["ExpOp"],             "test_fns":["test_exp","test_exp_edge"],                                        "bench_file":"benchmarks/ops/bench_binary_elementwise.py"},
+        {"id":"ew.unary_math.log",             "name":"log",              "sub":"unary_math",            "op_classes":["LogOp"],             "test_fns":["test_log","test_log_edge"],                                        "bench_file":"benchmarks/ops/bench_binary_elementwise.py"},
+        {"id":"ew.unary_math.sqrt",            "name":"sqrt",             "sub":"unary_math",            "op_classes":["SqrtOp"],            "test_fns":["test_sqrt","test_sqrt_edge"],                                      "bench_file":"benchmarks/ops/bench_binary_elementwise.py"},
+        {"id":"ew.unary_math.rsqrt",           "name":"rsqrt",            "sub":"unary_math",            "op_classes":["RsqrtOp"],           "test_fns":["test_rsqrt","test_rsqrt_edge"],                                    "bench_file":"benchmarks/ops/bench_binary_elementwise.py"},
+        {"id":"ew.unary_math.abs",             "name":"abs",              "sub":"unary_math",            "op_classes":["AbsOp"],             "test_fns":["test_abs"],                                                        "bench_file":"benchmarks/ops/bench_binary_elementwise.py"},
+        {"id":"ew.unary_math.neg",             "name":"neg",              "sub":"unary_math",            "op_classes":["NegOp"],             "test_fns":["test_neg"],                                                        "bench_file":"benchmarks/ops/bench_binary_elementwise.py"},
+        {"id":"ew.unary_math.reciprocal",      "name":"reciprocal",       "sub":"unary_math",            "op_classes":["ReciprocalOp"],      "test_fns":["test_reciprocal","test_reciprocal_edge"],                          "bench_file":"benchmarks/ops/bench_binary_elementwise.py"},
+        {"id":"ew.unary_math.sign",            "name":"sign",             "sub":"unary_math",            "op_classes":["SignOp"],            "test_fns":["test_sign","test_sign_edge"],                                      "bench_file":"benchmarks/ops/bench_binary_elementwise.py"},
+        {"id":"ew.unary_math.sin",             "name":"sin",              "sub":"unary_math",            "op_classes":["SinOp"],             "test_fns":["test_sin"],                                                        "bench_file":"benchmarks/ops/bench_binary_elementwise.py"},
+        {"id":"ew.unary_math.cos",             "name":"cos",              "sub":"unary_math",            "op_classes":["CosOp"],             "test_fns":["test_cos"],                                                        "bench_file":"benchmarks/ops/bench_binary_elementwise.py"},
+        {"id":"ew.unary_math.floor",           "name":"floor",            "sub":"unary_math",            "op_classes":["FloorOp"],           "test_fns":["test_floor"],                                                      "bench_file":"benchmarks/ops/bench_binary_elementwise.py"},
+        {"id":"ew.unary_math.ceil",            "name":"ceil",             "sub":"unary_math",            "op_classes":["CeilOp"],            "test_fns":["test_ceil"],                                                       "bench_file":"benchmarks/ops/bench_binary_elementwise.py"},
+        {"id":"ew.unary_math.round",           "name":"round",            "sub":"unary_math",            "op_classes":["RoundOp"],           "test_fns":["test_round"],                                                      "bench_file":"benchmarks/ops/bench_binary_elementwise.py"},
+        {"id":"ew.unary_math.trunc",           "name":"trunc",            "sub":"unary_math",            "op_classes":["TruncOp"],           "test_fns":["test_trunc"],                                                      "bench_file":"benchmarks/ops/bench_binary_elementwise.py"},
+        {"id":"ew.unary_math.erf",             "name":"erf",              "sub":"unary_math",            "op_classes":["ErfOp"],             "test_fns":["test_erf","test_erf_edge"],                                        "bench_file":"benchmarks/ops/bench_binary_elementwise.py"},
+        {"id":"ew.unary_math.log1p",           "name":"log1p",            "sub":"unary_math",            "op_classes":["Log1pOp"],           "test_fns":["test_log1p","test_log1p_edge"],                                    "bench_file":"benchmarks/ops/bench_binary_elementwise.py"},
+        {"id":"ew.unary_math.expm1",           "name":"expm1",            "sub":"unary_math",            "op_classes":["Expm1Op"],           "test_fns":["test_expm1","test_expm1_edge"],                                    "bench_file":"benchmarks/ops/bench_binary_elementwise.py"},
+
+        {"id":"ew.activation.relu",            "name":"relu",             "sub":"activation",            "op_classes":["ReluOp"],            "test_fns":["test_relu_op","test_relu_strategies"],                            "bench_file":"benchmarks/ops/bench_activation.py"},
+        {"id":"ew.activation.gelu",            "name":"gelu",             "sub":"activation",            "op_classes":["GeluOp"],            "test_fns":["test_gelu"],                                                       "bench_file":"benchmarks/ops/bench_activation.py"},
+        {"id":"ew.activation.silu",            "name":"silu",             "sub":"activation",            "op_classes":["SiluOp"],            "test_fns":["test_silu"],                                                       "bench_file":"benchmarks/ops/bench_activation.py"},
+        {"id":"ew.activation.sigmoid",         "name":"sigmoid",          "sub":"activation",            "op_classes":["SigmoidOp"],         "test_fns":["test_sigmoid","test_sigmoid_edge"],                                "bench_file":"benchmarks/ops/bench_activation.py"},
+        {"id":"ew.activation.tanh",            "name":"tanh",             "sub":"activation",            "op_classes":["TanhOp"],            "test_fns":["test_tanh","test_tanh_edge"],                                      "bench_file":"benchmarks/ops/bench_activation.py"},
+        {"id":"ew.activation.leaky_relu",      "name":"leaky_relu",       "sub":"activation",            "op_classes":["LeakyReluOp"],       "test_fns":["test_leaky_relu_op"],                                              "bench_file":"benchmarks/ops/bench_activation.py"},
+        {"id":"ew.activation.elu",             "name":"elu",              "sub":"activation",            "op_classes":["EluOp"],             "test_fns":["test_elu_op"],                                                     "bench_file":"benchmarks/ops/bench_activation.py"},
+        {"id":"ew.activation.selu",            "name":"selu",             "sub":"activation",            "op_classes":["SeluOp"],            "test_fns":["test_selu"],                                                       "bench_file":"benchmarks/ops/bench_activation.py"},
+        {"id":"ew.activation.hardswish",       "name":"hardswish",        "sub":"activation",            "op_classes":["HardswishOp"],       "test_fns":["test_hardswish"],                                                  "bench_file":"benchmarks/ops/bench_activation.py"},
+        {"id":"ew.activation.hardsigmoid",     "name":"hardsigmoid",      "sub":"activation",            "op_classes":["HardsigmoidOp"],     "test_fns":["test_hardsigmoid"],                                               "bench_file":"benchmarks/ops/bench_activation.py"},
+        {"id":"ew.activation.hardtanh",        "name":"hardtanh",         "sub":"activation",            "op_classes":["HardtanhOp"],        "test_fns":["test_hardtanh_op"],                                               "bench_file":"benchmarks/ops/bench_activation.py"},
+        {"id":"ew.activation.softplus",        "name":"softplus",         "sub":"activation",            "op_classes":["SoftplusOp"],        "test_fns":["test_softplus_op"],                                               "bench_file":"benchmarks/ops/bench_activation.py"},
+        {"id":"ew.activation.mish",            "name":"mish",             "sub":"activation",            "op_classes":["MishOp"],            "test_fns":["test_mish"],                                                       "bench_file":"benchmarks/ops/bench_activation.py"},
+        {"id":"ew.activation.prelu",           "name":"prelu",            "sub":"activation",            "op_classes":["PreluOp"],           "test_fns":["test_prelu_op"],                                                   "bench_file":"benchmarks/ops/bench_activation.py"},
+
+        {"id":"ew.fused_gated.silu_and_mul",   "name":"silu_and_mul",     "sub":"fused_gated_activation","op_classes":["SiluAndMulOp"],      "test_fns":["test_silu_and_mul_op"],                                           "bench_file":"benchmarks/ops/bench_activation.py"},
+        {"id":"ew.fused_gated.gelu_and_mul",   "name":"gelu_and_mul",     "sub":"fused_gated_activation","op_classes":["GeluAndMulOp"],      "test_fns":["test_gelu_and_mul_op"],                                           "bench_file":"benchmarks/ops/bench_activation.py"},
+        {"id":"ew.fused_gated.gelu_tanh_and_mul","name":"gelu_tanh_and_mul","sub":"fused_gated_activation","op_classes":["GeluTanhAndMulOp"],"test_fns":["test_gelu_tanh_and_mul_op"],                                      "bench_file":"benchmarks/ops/bench_activation.py"},
+
+        {"id":"ew.comparison.eq",              "name":"eq",               "sub":"comparison",            "op_classes":["EqOp"],              "test_fns":["test_eq_op","test_eq_edge_case"],                                  "bench_file":"benchmarks/ops/bench_binary_elementwise.py"},
+        {"id":"ew.comparison.ne",              "name":"ne",               "sub":"comparison",            "op_classes":["NeOp"],              "test_fns":["test_ne_op"],                                                      "bench_file":"benchmarks/ops/bench_binary_elementwise.py"},
+        {"id":"ew.comparison.gt",              "name":"gt",               "sub":"comparison",            "op_classes":["GtOp"],              "test_fns":["test_gt_op"],                                                      "bench_file":"benchmarks/ops/bench_binary_elementwise.py"},
+        {"id":"ew.comparison.lt",              "name":"lt",               "sub":"comparison",            "op_classes":["LtOp"],              "test_fns":["test_lt_op"],                                                      "bench_file":"benchmarks/ops/bench_binary_elementwise.py"},
+        {"id":"ew.comparison.ge",              "name":"ge",               "sub":"comparison",            "op_classes":["GeOp"],              "test_fns":["test_ge_op"],                                                      "bench_file":"benchmarks/ops/bench_binary_elementwise.py"},
+        {"id":"ew.comparison.le",              "name":"le",               "sub":"comparison",            "op_classes":["LeOp"],              "test_fns":["test_le_op"],                                                      "bench_file":"benchmarks/ops/bench_binary_elementwise.py"},
+
+        {"id":"ew.bitwise.and",                "name":"bitwise_and",      "sub":"bitwise",               "op_classes":["BitwiseAndOp"],      "test_fns":["test_bitwise_and_op"],                                             "bench_file":"benchmarks/ops/bench_binary_elementwise.py"},
+        {"id":"ew.bitwise.or",                 "name":"bitwise_or",       "sub":"bitwise",               "op_classes":["BitwiseOrOp"],       "test_fns":["test_bitwise_or_op"],                                              "bench_file":"benchmarks/ops/bench_binary_elementwise.py"},
+        {"id":"ew.bitwise.xor",                "name":"bitwise_xor",      "sub":"bitwise",               "op_classes":["BitwiseXorOp"],      "test_fns":["test_bitwise_xor_op"],                                             "bench_file":"benchmarks/ops/bench_binary_elementwise.py"},
+        {"id":"ew.bitwise.not",                "name":"bitwise_not",      "sub":"bitwise",               "op_classes":["BitwiseNotOp"],      "test_fns":["test_bitwise_not"],                                                "bench_file":"benchmarks/ops/bench_binary_elementwise.py"},
+
+        {"id":"ew.logical.not",                "name":"logical_not",      "sub":"logical",               "op_classes":["LogicalNotOp"],      "test_fns":["test_logical_not"],                                                "bench_file":"benchmarks/ops/bench_binary_elementwise.py"},
+        {"id":"ew.logical.and",                "name":"logical_and",      "sub":"logical",               "op_classes":["LogicalAndOp"],      "test_fns":["test_logical_and_op"],                                             "bench_file":"benchmarks/ops/bench_binary_elementwise.py"},
+        {"id":"ew.logical.or",                 "name":"logical_or",       "sub":"logical",               "op_classes":["LogicalOrOp"],       "test_fns":["test_logical_or_op"],                                              "bench_file":"benchmarks/ops/bench_binary_elementwise.py"},
+
+        {"id":"ew.special.where",              "name":"where",            "sub":"special_elementwise",   "op_classes":["WhereOp"],           "test_fns":["test_where_op"],                                                   "bench_file":null},
+        {"id":"ew.special.clamp",              "name":"clamp",            "sub":"special_elementwise",   "op_classes":["ClampOp"],           "test_fns":["test_clamp_op"],                                                   "bench_file":null},
+        {"id":"ew.special.masked_fill",        "name":"masked_fill",      "sub":"special_elementwise",   "op_classes":["MaskedFillOp"],      "test_fns":["test_masked_fill_op"],                                             "bench_file":null},
+        {"id":"ew.special.nan_to_num",         "name":"nan_to_num",       "sub":"special_elementwise",   "op_classes":["NanToNumOp"],        "test_fns":["test_nan_to_num_op"],                                              "bench_file":null},
+        {"id":"ew.special.isnan",              "name":"isnan",            "sub":"special_elementwise",   "op_classes":["IsnanOp"],           "test_fns":["test_isnan","test_isnan_edge"],                                     "bench_file":null},
+        {"id":"ew.special.isinf",              "name":"isinf",            "sub":"special_elementwise",   "op_classes":["IsinfOp"],           "test_fns":["test_isinf","test_isinf_edge"],                                     "bench_file":null},
+        {"id":"ew.special.isfinite",           "name":"isfinite",         "sub":"special_elementwise",   "op_classes":["IsfiniteOp"],        "test_fns":["test_isfinite","test_isfinite_edge"],                               "bench_file":null},
+
+        {"id":"ew.dropout.dropout",            "name":"dropout",          "sub":"dropout",               "op_classes":["DropoutOp"],         "test_fns":["test_dropout_op"],                                                 "bench_file":null},
+
+        {"id":"ew.rope.neox",                  "name":"rope_neox",        "sub":"rope",                  "op_classes":["RopeNeoxOp","RopeOp"],"test_fns":["test_rope_neox","test_rope_op"],                                  "bench_file":null},
+        {"id":"ew.rope.non_neox",              "name":"rope_non_neox",    "sub":"rope",                  "op_classes":["RopeNonNeoxOp"],     "test_fns":["test_rope_non_neox"],                                              "bench_file":null},
+        {"id":"ew.rope.llama31",               "name":"rope_llama31",     "sub":"rope",                  "op_classes":["RopeLlama31Op"],     "test_fns":["test_rope_llama31"],                                               "bench_file":null},
+        {"id":"ew.rope.yarn",                  "name":"yarn_rope",        "sub":"rope",                  "op_classes":["YarnRopeOp"],        "test_fns":["test_yarn_rope"],                                                  "bench_file":null},
+        {"id":"ew.rope.longrope",              "name":"longrope",         "sub":"rope",                  "op_classes":["LongropeOp"],        "test_fns":["test_longrope"],                                                   "bench_file":null},
+
+        {"id":"ew.alibi.alibi",                "name":"alibi",            "sub":"alibi",                 "op_classes":["AlibiOp"],           "test_fns":["test_alibi_op"],                                                   "bench_file":null},
+        {"id":"ew.sinusoidal.sinusoidal",      "name":"sinusoidal",       "sub":"sinusoidal",            "op_classes":["SinusoidalOp"],      "test_fns":["test_sinusoidal_op"],                                              "bench_file":null}
+      ]
+    },
+    {
+      "id": 2,
+      "name": "Reduce",
+      "issue": 398,
+      "difficulty": 1,
+      "ops": [
+        {"id":"reduce.reduce.sum",         "name":"sum",          "sub":"reduce",              "op_classes":["SumOp"],          "test_fns":["test_sum_op","test_sum_1d","test_sum_3d","test_sum_4d"],         "bench_file":"benchmarks/ops/bench_reduce.py"},
+        {"id":"reduce.reduce.mean",        "name":"mean",         "sub":"reduce",              "op_classes":["MeanOp"],         "test_fns":["test_mean_op"],                                                  "bench_file":"benchmarks/ops/bench_reduce.py"},
+        {"id":"reduce.reduce.amin",        "name":"amin",         "sub":"reduce",              "op_classes":["AminOp"],         "test_fns":["test_amin_op"],                                                  "bench_file":"benchmarks/ops/bench_reduce.py"},
+        {"id":"reduce.reduce.amax",        "name":"amax",         "sub":"reduce",              "op_classes":["AmaxOp"],         "test_fns":["test_amax_op"],                                                  "bench_file":"benchmarks/ops/bench_reduce.py"},
+        {"id":"reduce.reduce.prod",        "name":"prod",         "sub":"reduce",              "op_classes":["ProdOp"],         "test_fns":["test_prod_op"],                                                  "bench_file":"benchmarks/ops/bench_reduce.py"},
+        {"id":"reduce.reduce.std",         "name":"std",          "sub":"reduce",              "op_classes":["StdOp"],          "test_fns":["test_std_op","test_std_3d","test_std_bessel"],                   "bench_file":"benchmarks/ops/bench_reduce.py"},
+        {"id":"reduce.reduce.var",         "name":"var",          "sub":"reduce",              "op_classes":["VarOp"],          "test_fns":["test_var_op","test_var_1d","test_var_3d","test_var_bessel"],      "bench_file":"benchmarks/ops/bench_reduce.py"},
+        {"id":"reduce.reduce.var_mean",    "name":"var_mean",     "sub":"reduce",              "op_classes":["VarMeanOp"],      "test_fns":["test_var_mean_op","test_var_mean_bessel"],                        "bench_file":"benchmarks/ops/bench_reduce.py"},
+
+        {"id":"reduce.softmax.softmax",    "name":"softmax",      "sub":"softmax",             "op_classes":["SoftmaxOp"],      "test_fns":["test_softmax_op","test_softmax_1d","test_softmax_3d"],           "bench_file":"benchmarks/ops/bench_reduce.py"},
+        {"id":"reduce.softmax.log_softmax","name":"log_softmax",  "sub":"softmax",             "op_classes":["LogSoftmaxOp"],   "test_fns":["test_log_softmax_op","test_log_softmax_1d"],                     "bench_file":"benchmarks/ops/bench_reduce.py"},
+        {"id":"reduce.softmax.logsumexp",  "name":"logsumexp",    "sub":"softmax",             "op_classes":["LogSumExpOp"],    "test_fns":["test_logsumexp_op","test_logsumexp_1d"],                          "bench_file":"benchmarks/ops/bench_reduce.py"},
+
+        {"id":"reduce.argreduce.argmax",   "name":"argmax",       "sub":"argreduce",           "op_classes":["ArgmaxOp"],       "test_fns":["test_argmax_op","test_argmax_1d","test_argmax_3d"],              "bench_file":"benchmarks/ops/bench_argreduce.py"},
+        {"id":"reduce.argreduce.argmin",   "name":"argmin",       "sub":"argreduce",           "op_classes":["ArgminOp"],       "test_fns":["test_argmin_op","test_argmin_1d","test_argmin_3d"],              "bench_file":"benchmarks/ops/bench_argreduce.py"},
+
+        {"id":"reduce.cumulative.cumsum",  "name":"cumsum",       "sub":"cumulative",          "op_classes":["CumsumOp"],       "test_fns":["test_cumsum_op","test_cumsum_1d","test_cumsum_3d"],              "bench_file":"benchmarks/ops/bench_cumulative.py"},
+        {"id":"reduce.cumulative.cumprod", "name":"cumprod",      "sub":"cumulative",          "op_classes":["CumprodOp"],      "test_fns":["test_cumprod_op","test_cumprod_1d","test_cumprod_3d"],           "bench_file":"benchmarks/ops/bench_cumulative.py"},
+
+        {"id":"reduce.logical_reduce.any", "name":"any",          "sub":"logical_reduce",      "op_classes":["AnyOp"],          "test_fns":["test_any_op"],                                                   "bench_file":null},
+        {"id":"reduce.logical_reduce.all", "name":"all",          "sub":"logical_reduce",      "op_classes":["AllOp"],          "test_fns":["test_all_op"],                                                   "bench_file":null},
+
+        {"id":"reduce.linalg.l1_norm",     "name":"l1_norm",      "sub":"linalg_vector_norm",  "op_classes":["L1NormOp"],       "test_fns":["test_l1_norm_op"],                                               "bench_file":null},
+        {"id":"reduce.linalg.l2_norm",     "name":"l2_norm",      "sub":"linalg_vector_norm",  "op_classes":["L2NormOp"],       "test_fns":["test_l2_norm_op"],                                               "bench_file":null},
+        {"id":"reduce.linalg.inf_norm",    "name":"inf_norm",     "sub":"linalg_vector_norm",  "op_classes":["InfNormOp"],      "test_fns":["test_inf_norm_op"],                                              "bench_file":null}
+      ]
+    },
+    {
+      "id": 3,
+      "name": "Norm",
+      "issue": 399,
+      "difficulty": 1,
+      "ops": [
+        {"id":"norm.layer_norm",           "name":"layer_norm",           "sub":"layer_norm",            "op_classes":["LayerNormOp"],             "test_fns":["test_layer_norm_op","test_layer_norm_3d"],                 "bench_file":"benchmarks/ops/bench_layer_norm.py"},
+        {"id":"norm.batch_norm",           "name":"batch_norm",           "sub":"batch_norm",            "op_classes":["BatchNormFwdOp"],          "test_fns":["test_batch_norm_fwd","test_batch_norm_bwd"],               "bench_file":"benchmarks/ops/bench_batch_norm.py"},
+        {"id":"norm.group_norm",           "name":"group_norm",           "sub":"group_norm",            "op_classes":["GroupNormOp"],             "test_fns":["test_group_norm_op","test_group_norm_non_contiguous"],      "bench_file":"benchmarks/ops/bench_group_norm.py"},
+        {"id":"norm.instance_norm",        "name":"instance_norm",        "sub":"instance_norm",         "op_classes":["InstanceNormOp"],          "test_fns":["test_instance_norm_op","test_instance_norm_non_contiguous"],"bench_file":"benchmarks/ops/bench_instance_norm.py"},
+        {"id":"norm.rms_norm",             "name":"rms_norm",             "sub":"rms_norm",              "op_classes":["RmsNormOp"],               "test_fns":["test_rms_norm_op","test_rms_norm_3d"],                     "bench_file":"benchmarks/ops/bench_rms_norm.py"},
+        {"id":"norm.qk_norm",              "name":"qk_norm",              "sub":"qk_norm",               "op_classes":["QkNormOp"],                "test_fns":["test_qk_norm_op"],                                         "bench_file":null},
+        {"id":"norm.ada_layer_norm",       "name":"ada_layer_norm",       "sub":"ada_layer_norm",        "op_classes":["AdaLayerNormOp"],          "test_fns":["test_ada_layer_norm_op","test_ada_layer_norm_3d"],         "bench_file":"benchmarks/ops/bench_ada_layer_norm.py"},
+        {"id":"norm.ada_layer_norm_zero",  "name":"ada_layer_norm_zero",  "sub":"ada_layer_norm_zero",   "op_classes":["AdaLayerNormZeroOp"],      "test_fns":["test_ada_layer_norm_zero_op","test_ada_layer_norm_zero_3d"],"bench_file":"benchmarks/ops/bench_ada_layer_norm.py"},
+        {"id":"norm.fused_add_layer_norm", "name":"fused_add_layer_norm", "sub":"fused_add_norm",        "op_classes":["FusedAddLayerNormOp"],     "test_fns":["test_fused_add_layer_norm_op","test_fused_add_layer_norm_3d"],"bench_file":"benchmarks/ops/bench_fused_add_layer_norm.py"},
+        {"id":"norm.fused_add_rmsnorm",    "name":"fused_add_rmsnorm",    "sub":"fused_add_norm",        "op_classes":["FusedAddRmsNormOp"],       "test_fns":["test_fused_add_rmsnorm_op","test_fused_add_rmsnorm_3d"],   "bench_file":"benchmarks/ops/bench_fused_add_layer_norm.py"}
+      ]
+    },
+    {
+      "id": 4,
+      "name": "Conv & Pooling",
+      "issue": 402,
+      "difficulty": 1,
+      "ops": [
+        {"id":"conv.conv.conv1d",                  "name":"conv1d",               "sub":"conv",          "op_classes":["Conv1dOp"],             "test_fns":["test_conv1d_op"],            "bench_file":null},
+        {"id":"conv.conv.conv2d",                  "name":"conv2d",               "sub":"conv",          "op_classes":["Conv2dOp"],             "test_fns":["test_conv2d_op"],            "bench_file":null},
+        {"id":"conv.conv.conv3d",                  "name":"conv3d",               "sub":"conv",          "op_classes":["Conv3dOp"],             "test_fns":["test_conv3d_op"],            "bench_file":null},
+        {"id":"conv.conv_transpose.conv_t1d",      "name":"conv_transpose1d",     "sub":"conv_transpose","op_classes":["ConvTranspose1dOp"],    "test_fns":["test_conv_transpose1d_op"],  "bench_file":null},
+        {"id":"conv.conv_transpose.conv_t2d",      "name":"conv_transpose2d",     "sub":"conv_transpose","op_classes":["ConvTranspose2dOp"],    "test_fns":["test_conv_transpose2d_op"],  "bench_file":null},
+        {"id":"conv.depthwise.depthwise_conv2d",   "name":"depthwise_conv2d",     "sub":"depthwise",     "op_classes":["DepthwiseConv2dOp"],    "test_fns":["test_depthwise_conv2d_op"],  "bench_file":null},
+        {"id":"conv.grouped.grouped_conv2d",       "name":"grouped_conv2d",       "sub":"grouped",       "op_classes":["GroupedConv2dOp"],      "test_fns":["test_grouped_conv2d_op"],    "bench_file":null},
+        {"id":"conv.dilated.dilated_conv2d",       "name":"dilated_conv2d",       "sub":"dilated",       "op_classes":["DilatedConv2dOp"],      "test_fns":["test_dilated_conv2d_op"],    "bench_file":null},
+        {"id":"conv.max_pool.max_pool1d",          "name":"max_pool1d",           "sub":"max_pool",      "op_classes":["MaxPool1dOp"],          "test_fns":["test_max_pool1d_op"],        "bench_file":null},
+        {"id":"conv.max_pool.max_pool2d",          "name":"max_pool2d",           "sub":"max_pool",      "op_classes":["MaxPool2dOp"],          "test_fns":["test_max_pool2d_op"],        "bench_file":null},
+        {"id":"conv.max_pool.max_pool3d",          "name":"max_pool3d",           "sub":"max_pool",      "op_classes":["MaxPool3dOp"],          "test_fns":["test_max_pool3d_op"],        "bench_file":null},
+        {"id":"conv.avg_pool.avg_pool1d",          "name":"avg_pool1d",           "sub":"avg_pool",      "op_classes":["AvgPool1dOp"],          "test_fns":["test_avg_pool1d_op"],        "bench_file":null},
+        {"id":"conv.avg_pool.avg_pool2d",          "name":"avg_pool2d",           "sub":"avg_pool",      "op_classes":["AvgPool2dOp"],          "test_fns":["test_avg_pool2d_op"],        "bench_file":null},
+        {"id":"conv.avg_pool.avg_pool3d",          "name":"avg_pool3d",           "sub":"avg_pool",      "op_classes":["AvgPool3dOp"],          "test_fns":["test_avg_pool3d_op"],        "bench_file":null},
+        {"id":"conv.adaptive.adaptive_avg_pool2d", "name":"adaptive_avg_pool2d",  "sub":"adaptive_pool", "op_classes":["AdaptiveAvgPool2dOp"],  "test_fns":["test_adaptive_avg_pool2d_op"],"bench_file":null},
+        {"id":"conv.adaptive.adaptive_max_pool2d", "name":"adaptive_max_pool2d",  "sub":"adaptive_pool", "op_classes":["AdaptiveMaxPool2dOp"],  "test_fns":["test_adaptive_max_pool2d_op"],"bench_file":null}
+      ]
+    },
+    {
+      "id": 5,
+      "name": "GEMM",
+      "issue": 400,
+      "difficulty": 2,
+      "ops": [
+        {"id":"gemm.gemm.fp16",             "name":"gemm_fp16",          "sub":"gemm",           "op_classes":["GemmOp"],           "test_fns":["test_gemm"],                                                "bench_file":"benchmarks/ops/bench_gemm.py"},
+        {"id":"gemm.gemm.fp8",              "name":"gemm_fp8",           "sub":"gemm",           "op_classes":["GemmOp"],           "test_fns":["test_gemm_fp8","test_gemm_e4m3"],                           "bench_file":"benchmarks/ops/bench_gemm.py"},
+        {"id":"gemm.gemm.fp8_block_scaled", "name":"gemm_fp8_block_scaled","sub":"gemm",         "op_classes":["GemmOp"],           "test_fns":["test_gemm_fp8_block_scaled"],                               "bench_file":"benchmarks/ops/bench_gemm.py"},
+        {"id":"gemm.gemm.gemv_fp16",        "name":"gemv_fp16",          "sub":"gemm",           "op_classes":["GemmOp"],           "test_fns":["test_gemv_boundary_lhs_row","test_gemv_boundary_rhs_col"],  "bench_file":"benchmarks/ops/bench_gemm.py"},
+        {"id":"gemm.gemm.gemv_fp8",         "name":"gemv_fp8",           "sub":"gemm",           "op_classes":["GemmOp"],           "test_fns":["test_gemv_fp8"],                                            "bench_file":"benchmarks/ops/bench_gemm.py"},
+        {"id":"gemm.gemm.small_batch_fp16", "name":"small_batch_gemm_fp16","sub":"gemm",         "op_classes":["GemmOp"],           "test_fns":["test_small_batch_gemm","test_small_batch_fp16"],            "bench_file":"benchmarks/ops/bench_gemm.py"},
+        {"id":"gemm.gemm.small_batch_fp8",  "name":"small_batch_gemm_fp8","sub":"gemm",          "op_classes":["GemmOp"],           "test_fns":["test_small_batch_fp8"],                                     "bench_file":"benchmarks/ops/bench_gemm.py"},
+
+        {"id":"gemm.bmm.fp16",              "name":"bmm_fp16",           "sub":"bmm",            "op_classes":["BmmOp","BatchedGemmOp"],            "test_fns":["test_bmm_op","test_bmm_fp16"],               "bench_file":"benchmarks/ops/bench_gemm.py"},
+        {"id":"gemm.bmm.fp8",               "name":"bmm_fp8",            "sub":"bmm",            "op_classes":["BmmOp","BatchedGemmOp"],            "test_fns":["test_bmm_fp8"],                              "bench_file":"benchmarks/ops/bench_gemm.py"},
+
+        {"id":"gemm.groupgemm.fp16",        "name":"groupgemm_fp16",     "sub":"groupgemm",      "op_classes":["GroupedGemmOp"],    "test_fns":["test_grouped_gemm"],                                        "bench_file":"benchmarks/ops/bench_grouped_gemm.py"},
+        {"id":"gemm.groupgemm.fp8",         "name":"groupgemm_fp8",      "sub":"groupgemm",      "op_classes":["GroupedGemmOp"],    "test_fns":["test_grouped_gemm_fp8"],                                    "bench_file":"benchmarks/ops/bench_grouped_gemm.py"},
+
+        {"id":"gemm.outer.outer",           "name":"outer",              "sub":"outer",          "op_classes":["OuterOp"],          "test_fns":["test_outer_op"],                                            "bench_file":null},
+
+        {"id":"gemm.lowbit.w4a16",          "name":"w4a16",              "sub":"lowbit_gemm",    "op_classes":["W4A16GemmOp"],      "test_fns":["test_w4a16_gemm","test_gemm_w4a16"],                        "bench_file":null},
+        {"id":"gemm.lowbit.w8a8",           "name":"w8a8",               "sub":"lowbit_gemm",    "op_classes":["W8A8GemmOp"],       "test_fns":["test_w8a8_gemm","test_gemm_w8a8"],                          "bench_file":null},
+        {"id":"gemm.lowbit.w8a8_int8",      "name":"w8a8_int8",          "sub":"lowbit_gemm",    "op_classes":["W8A8Int8GemmOp"],   "test_fns":["test_w8a8_int8_gemm"],                                     "bench_file":null},
+        {"id":"gemm.lowbit.weight_only_int4","name":"weight_only_int4",  "sub":"lowbit_gemm",    "op_classes":["WeightOnlyInt4GemmOp"],"test_fns":["test_weight_only_int4"],                                 "bench_file":null},
+        {"id":"gemm.lowbit.fp4",            "name":"fp4",                "sub":"lowbit_gemm",    "op_classes":["Fp4GemmOp"],        "test_fns":["test_fp4_gemm"],                                            "bench_file":null},
+
+        {"id":"gemm.sparse.fp16",           "name":"sparse_gemm_fp16",   "sub":"sparse_gemm_2_4","op_classes":["SparseGemmOp"],     "test_fns":["test_sparse_gemm_fp16"],                                    "bench_file":null},
+        {"id":"gemm.sparse.fp8",            "name":"sparse_gemm_fp8",    "sub":"sparse_gemm_2_4","op_classes":["SparseGemmOp"],     "test_fns":["test_sparse_gemm_fp8"],                                     "bench_file":null}
+      ]
+    },
+    {
+      "id": 6,
+      "name": "Quantize",
+      "issue": 401,
+      "difficulty": 2,
+      "ops": [
+        {"id":"quant.int8.per_tensor",      "name":"int8_per_tensor",    "sub":"int8_quantize",  "op_classes":["Int8PerTensorQuantOp"],   "test_fns":["test_int8_per_tensor_quant"],     "bench_file":null},
+        {"id":"quant.int8.per_channel",     "name":"int8_per_channel",   "sub":"int8_quantize",  "op_classes":["Int8PerChannelQuantOp"],  "test_fns":["test_int8_per_channel_quant"],    "bench_file":null},
+        {"id":"quant.int8.per_block",       "name":"int8_per_block",     "sub":"int8_quantize",  "op_classes":["Int8PerBlockQuantOp"],    "test_fns":["test_int8_per_block_quant"],      "bench_file":null},
+        {"id":"quant.int8.smooth_quant",    "name":"smooth_quant",       "sub":"int8_quantize",  "op_classes":["SmoothQuantOp"],          "test_fns":["test_smooth_quant_op"],           "bench_file":null},
+
+        {"id":"quant.int4.per_channel",     "name":"int4_per_channel",   "sub":"int4_quantize",  "op_classes":["Int4PerChannelQuantOp"],  "test_fns":["test_int4_per_channel_quant"],    "bench_file":null},
+        {"id":"quant.int4.per_block",       "name":"int4_per_block",     "sub":"int4_quantize",  "op_classes":["Int4PerBlockQuantOp"],    "test_fns":["test_int4_per_block_quant"],      "bench_file":null},
+        {"id":"quant.int4.nf4",             "name":"nf4",                "sub":"int4_quantize",  "op_classes":["Nf4QuantOp"],             "test_fns":["test_nf4_quant"],                 "bench_file":null},
+
+        {"id":"quant.fp8.per_tensor",       "name":"fp8_per_tensor",     "sub":"fp8_quantize",   "op_classes":["Fp8QuantOp"],             "test_fns":["test_fp8_quant_op"],              "bench_file":"benchmarks/ops/bench_fp8_quant.py"},
+        {"id":"quant.fp8.per_block",        "name":"fp8_per_block",      "sub":"fp8_quantize",   "op_classes":["Fp8PerBlockQuantOp"],     "test_fns":["test_fp8_per_block_quant"],       "bench_file":"benchmarks/ops/bench_fp8_quant.py"},
+        {"id":"quant.fp8.cast_transpose",   "name":"fp8_cast_transpose", "sub":"fp8_quantize",   "op_classes":["Fp8CastTransposeOp"],     "test_fns":["test_fp8_cast_transpose"],        "bench_file":null}
+      ]
+    },
+    {
+      "id": 7,
+      "name": "Sampling",
+      "issue": 426,
+      "difficulty": 2,
+      "ops": [
+        {"id":"sampling.top_k",             "name":"top_k",                     "sub":"top_k",                     "op_classes":["TopKOp"],                        "test_fns":["test_top_k_op"],                      "bench_file":null},
+        {"id":"sampling.top_p",             "name":"top_p",                     "sub":"top_p",                     "op_classes":["TopPOp"],                        "test_fns":["test_top_p_op"],                      "bench_file":null},
+        {"id":"sampling.min_p",             "name":"min_p",                     "sub":"min_p",                     "op_classes":["MinPOp"],                        "test_fns":["test_min_p_op"],                      "bench_file":null},
+        {"id":"sampling.top_k_top_p",       "name":"top_k_top_p",               "sub":"top_k_top_p",               "op_classes":["TopKTopPOp"],                    "test_fns":["test_top_k_top_p_op"],                "bench_file":null},
+        {"id":"sampling.temperature_scale", "name":"temperature_scale",         "sub":"temperature_scale",         "op_classes":["TemperatureScaleOp"],            "test_fns":["test_temperature_scale_op"],          "bench_file":null},
+        {"id":"sampling.from_probs",        "name":"sampling_from_probs",       "sub":"sampling_from_probs",       "op_classes":["SamplingFromProbsOp"],           "test_fns":["test_sampling_from_probs_op"],        "bench_file":null},
+        {"id":"sampling.chain_spec",        "name":"chain_speculative_sampling", "sub":"chain_speculative_sampling","op_classes":["ChainSpeculativeSamplingOp","TopkSelectorOp"],"test_fns":["test_topk_selector_op","test_chain_speculative_sampling_op"],"bench_file":null}
+      ]
+    },
+    {
+      "id": 8,
+      "name": "Flash Attention",
+      "issue": 403,
+      "difficulty": 3,
+      "ops": [
+        {"id":"attn.flash.prefill_fwd",       "name":"flash_prefill_fwd",        "sub":"flash_attention",  "op_classes":["GroupQueryAttentionFwdOp","MultiHeadAttentionFwdOp"],              "test_fns":["test_gqa_fwd","test_mha_fwd"],                          "bench_file":"benchmarks/ops/bench_gqa.py"},
+        {"id":"attn.flash.prefill_bwd",       "name":"flash_prefill_bwd",        "sub":"flash_attention",  "op_classes":["GroupQueryAttentionBwdOp","MultiHeadAttentionBwdOp"],              "test_fns":["test_gqa_bwd","test_mha_bwd"],                          "bench_file":"benchmarks/ops/bench_gqa.py"},
+        {"id":"attn.flash.prefill_varlen_fwd","name":"flash_prefill_varlen_fwd", "sub":"flash_attention",  "op_classes":["GqaSlidingWindowVarlenFwdOp"],                                    "test_fns":["test_gqa_sliding_window_varlen_fwd_op"],                "bench_file":null},
+        {"id":"attn.flash.prefill_varlen_bwd","name":"flash_prefill_varlen_bwd", "sub":"flash_attention",  "op_classes":["GroupQueryAttentionVarlenBwdOp"],                                 "test_fns":["test_gqa_varlen_bwd"],                                  "bench_file":null},
+        {"id":"attn.flash.decode_fwd",        "name":"flash_decode_fwd",         "sub":"flash_attention",  "op_classes":["GroupQueryAttentionDecodeWithKVCacheOp","MultiHeadAttentionDecodeWithKVCacheOp"],"test_fns":["test_gqa_decode","test_mha_decode"],  "bench_file":"benchmarks/ops/bench_gqa.py"},
+        {"id":"attn.flash.decode_paged_fwd",  "name":"flash_decode_paged_fwd",   "sub":"flash_attention",  "op_classes":["GroupQueryAttentionDecodePagedWithKVCacheOp","MultiHeadAttentionDecodePagedWithKVCacheOp"],"test_fns":["test_gqa_decode_paged_op","test_mha_decode_paged_op"],"bench_file":"benchmarks/ops/bench_gqa.py"},
+        {"id":"attn.flash.decode_varlen_fwd", "name":"flash_decode_varlen_fwd",  "sub":"flash_attention",  "op_classes":["GroupQueryAttentionDecodeVarlenOp"],                              "test_fns":["test_gqa_decode_varlen"],                               "bench_file":null},
+        {"id":"attn.flash.chunked_prefill",   "name":"flash_chunked_prefill_fwd","sub":"flash_attention",  "op_classes":["GroupQueryAttentionChunkedPrefillOp"],                            "test_fns":["test_gqa_chunked_prefill"],                             "bench_file":null},
+
+        {"id":"attn.mla.prefill_fwd",         "name":"mla_prefill_fwd",          "sub":"mla",              "op_classes":["MultiHeadLatentAttentionFwdOp"],                                  "test_fns":["test_mla_prefill_fwd"],                                 "bench_file":null},
+        {"id":"attn.mla.prefill_bwd",         "name":"mla_prefill_bwd",          "sub":"mla",              "op_classes":["MultiHeadLatentAttentionBwdOp"],                                  "test_fns":["test_mla_prefill_bwd"],                                 "bench_file":null},
+        {"id":"attn.mla.decode_fwd",          "name":"mla_decode_fwd",           "sub":"mla",              "op_classes":["MultiHeadLatentAttentionDecodeWithKVCacheOp"],                    "test_fns":["test_mla_decode","test_sparse_mla_decode"],             "bench_file":"benchmarks/ops/bench_deepseek_mla_decode.py"},
+        {"id":"attn.mla.decode_paged_fwd",    "name":"mla_decode_paged_fwd",     "sub":"mla",              "op_classes":["MultiHeadLatentAttentionDecodePagedWithKVCacheOp"],               "test_fns":["test_mla_decode_paged"],                                "bench_file":null},
+
+        {"id":"attn.nsa.prefill_fwd",         "name":"nsa_prefill_fwd",          "sub":"nsa",              "op_classes":["NSAFwdVarlenOp"],                                                 "test_fns":["test_nsa_varlen_op","test_nsa_cmp_fwd_varlen_op"],      "bench_file":"benchmarks/ops/bench_deepseek_nsa_fwd.py"},
+        {"id":"attn.nsa.decode_fwd",          "name":"nsa_decode_fwd",           "sub":"nsa",              "op_classes":["NSADecodeOp"],                                                    "test_fns":["test_nsa_decode_op"],                                   "bench_file":null},
+
+        {"id":"attn.dsa.prefill_fwd",         "name":"dsa_prefill_fwd",          "sub":"dsa",              "op_classes":["DeepSeekSparseAttentionFwdOp"],                                   "test_fns":["test_dsa_prefill_fwd"],                                 "bench_file":null},
+        {"id":"attn.dsa.decode_fwd",          "name":"dsa_decode_fwd",           "sub":"dsa",              "op_classes":["DeepSeekSparseAttentionDecodeWithKVCacheOp"],                     "test_fns":["test_deepseek_dsa_decode","test_dsa_decode"],            "bench_file":"benchmarks/ops/bench_deepseek_dsa_decode.py"}
+      ]
+    },
+    {
+      "id": 9,
+      "name": "MoE",
+      "issue": 404,
+      "difficulty": 3,
+      "ops": [
+        {"id":"moe.permute_align",          "name":"permute_align",       "sub":"permute_align",   "op_classes":["PermuteAlignOp"],        "test_fns":["test_permute_align_op"],          "bench_file":null},
+        {"id":"moe.unpermute_depad",        "name":"unpermute_depad",     "sub":"unpermute_depad", "op_classes":["UnpermuteDepadOp"],      "test_fns":["test_unpermute_depad_op"],        "bench_file":null},
+        {"id":"moe.fused_moe.deepseek",     "name":"fused_moe_deepseek",  "sub":"fused_moe",       "op_classes":["FusedMoEDeepSeekOp"],    "test_fns":["test_fused_moe_deepseek"],        "bench_file":null},
+        {"id":"moe.fused_moe.glm",          "name":"fused_moe_glm",       "sub":"fused_moe",       "op_classes":["FusedMoEGlmOp"],         "test_fns":["test_fused_moe_glm"],             "bench_file":null},
+        {"id":"moe.fused_moe.kimi",         "name":"fused_moe_kimi",      "sub":"fused_moe",       "op_classes":["FusedMoEKimiOp"],        "test_fns":["test_fused_moe_kimi"],            "bench_file":null},
+        {"id":"moe.fused_moe.qwen",         "name":"fused_moe_qwen",      "sub":"fused_moe",       "op_classes":["FusedMoEQwenOp"],        "test_fns":["test_fused_moe_qwen"],            "bench_file":null}
+      ]
+    },
+    {
+      "id": 10,
+      "name": "Linear Attention",
+      "issue": 405,
+      "difficulty": 3,
+      "ops": [
+        {"id":"linattn.gated_deltanet.chunkwise",  "name":"gated_deltanet_chunkwise",  "sub":"gated_deltanet","op_classes":["GatedDeltaNetFwdOp"],   "test_fns":["test_gated_deltanet_fwd","test_gated_deltanet_bwd"],      "bench_file":"benchmarks/ops/bench_gated_deltanet_fwd.py"},
+        {"id":"linattn.gated_deltanet.recurrence", "name":"gated_deltanet_recurrence", "sub":"gated_deltanet","op_classes":["GatedDeltaNetDecodeOp"], "test_fns":["test_gated_deltanet_decode","test_gated_deltanet_decode_multi_step"],"bench_file":"benchmarks/ops/bench_gated_deltanet_fwd.py"},
+        {"id":"linattn.deltanet.chunkwise",        "name":"deltanet_chunkwise",        "sub":"deltanet",      "op_classes":["DeltaNetFwdOp","EngramGateConvFwdOp"],    "test_fns":["test_deltanet_fwd","test_engram_gate_conv_fwd"],          "bench_file":"benchmarks/ops/bench_engram_fwd.py"},
+        {"id":"linattn.deltanet.recurrence",       "name":"deltanet_recurrence",       "sub":"deltanet",      "op_classes":["DeltaNetDecodeOp","EngramDecodeOp"],       "test_fns":["test_deltanet_decode","test_engram_decode"],              "bench_file":"benchmarks/ops/bench_engram_decode.py"},
+        {"id":"linattn.gla.chunkwise",             "name":"gla_chunkwise",             "sub":"gla",           "op_classes":["GlaFwdOp"],             "test_fns":["test_gla_fwd"],                                          "bench_file":null},
+        {"id":"linattn.gla.recurrence",            "name":"gla_recurrence",            "sub":"gla",           "op_classes":["GlaDecodeOp"],          "test_fns":["test_gla_decode"],                                       "bench_file":null},
+        {"id":"linattn.retnet.chunkwise",          "name":"retnet_chunkwise",          "sub":"retnet",        "op_classes":["RetNetFwdOp"],          "test_fns":["test_retnet_fwd"],                                       "bench_file":null},
+        {"id":"linattn.retnet.recurrence",         "name":"retnet_recurrence",         "sub":"retnet",        "op_classes":["RetNetDecodeOp"],       "test_fns":["test_retnet_decode"],                                    "bench_file":null}
+      ]
+    },
+    {
+      "id": 11,
+      "name": "SSM",
+      "issue": 406,
+      "difficulty": 3,
+      "ops": [
+        {"id":"ssm.mamba1", "name":"mamba1", "sub":"mamba1", "op_classes":["Mamba1Op"], "test_fns":["test_mamba1_op","test_mamba1_fwd"], "bench_file":null},
+        {"id":"ssm.mamba2", "name":"mamba2", "sub":"mamba2", "op_classes":["Mamba2Op"], "test_fns":["test_mamba2_op","test_mamba2_fwd"], "bench_file":null}
+      ]
+    }
+  ]
+}
