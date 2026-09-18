@@ -1,0 +1,909 @@
+{
+  "meta": {
+    "date": "20260911_234352",
+    "commit": "2716800e6431469159725bd86a7940bf7e6af860",
+    "generated_at": "2026-09-11T23:43:52.594987+00:00"
+  },
+  "test": {
+    "total_ops": 87,
+    "total_cases": 1138,
+    "passed_cases": 1136,
+    "failed_cases": 0,
+    "skipped_cases": 2,
+    "ops": {
+      "DeepSeekSparseAttentionDecodeWithKVCacheFwdOp": {
+        "module": "tileops.ops.attention.deepseek_dsa",
+        "category": "Attention",
+        "passed": 1,
+        "failed": 0,
+        "skipped": 0,
+        "max_abs_err": 0.000244,
+        "failing_tests": []
+      },
+      "NSAFwdVarlenOp": {
+        "module": "tileops.ops.attention.deepseek_nsa",
+        "category": "Attention",
+        "passed": 2,
+        "failed": 0,
+        "skipped": 0,
+        "max_abs_err": 0.000488,
+        "failing_tests": []
+      },
+      "GroupedQueryAttentionBwdOp": {
+        "module": "tileops.ops.attention.gqa",
+        "category": "Attention",
+        "passed": 2,
+        "failed": 0,
+        "skipped": 0,
+        "max_abs_err": 0.00391,
+        "failing_tests": []
+      },
+      "GroupedQueryAttentionDecodePagedWithKVCacheFwdOp": {
+        "module": "tileops.ops.attention.gqa",
+        "category": "Attention",
+        "passed": 6,
+        "failed": 0,
+        "skipped": 0,
+        "max_abs_err": 0.000244,
+        "failing_tests": []
+      },
+      "GroupedQueryAttentionSlidingWindowVarlenFwdOp": {
+        "module": "tileops.ops.attention.gqa",
+        "category": "Attention",
+        "passed": 12,
+        "failed": 0,
+        "skipped": 0,
+        "max_abs_err": 0.000244,
+        "failing_tests": []
+      },
+      "MultiHeadAttentionBwdOp": {
+        "module": "tileops.ops.attention.mha",
+        "category": "Attention",
+        "passed": 2,
+        "failed": 0,
+        "skipped": 0,
+        "max_abs_err": 0.00195,
+        "failing_tests": []
+      },
+      "MultiHeadAttentionDecodePagedWithKVCacheFwdOp": {
+        "module": "tileops.ops.attention.mha",
+        "category": "Attention",
+        "passed": 3,
+        "failed": 0,
+        "skipped": 0,
+        "max_abs_err": 0.000122,
+        "failing_tests": []
+      },
+      "ReluFwdOp": {
+        "module": "tileops.ops.elementwise.activations",
+        "category": "Elementwise",
+        "passed": 2,
+        "failed": 0,
+        "skipped": 0,
+        "max_abs_err": 0.0,
+        "failing_tests": []
+      },
+      "ReluFwdKernel": {
+        "module": "tileops.kernels.elementwise.activations",
+        "category": "Elementwise",
+        "passed": 2,
+        "failed": 0,
+        "skipped": 0,
+        "max_abs_err": 0.0,
+        "failing_tests": []
+      },
+      "AdaLayerNormFwdOp": {
+        "module": "tileops.ops.norm.ada_layer_norm",
+        "category": "Norm",
+        "passed": 8,
+        "failed": 0,
+        "skipped": 0,
+        "max_abs_err": 0.0156,
+        "failing_tests": []
+      },
+      "AdaLayerNormZeroFwdOp": {
+        "module": "tileops.ops.norm.ada_layer_norm_zero",
+        "category": "Norm",
+        "passed": 8,
+        "failed": 0,
+        "skipped": 0,
+        "max_abs_err": 0.0156,
+        "failing_tests": []
+      },
+      "ArgmaxFwdOp": {
+        "module": "tileops.ops.reduction.argreduce",
+        "category": "Reduction",
+        "passed": 5,
+        "failed": 0,
+        "skipped": 0,
+        "max_abs_err": 0.0,
+        "failing_tests": []
+      },
+      "ArgminFwdOp": {
+        "module": "tileops.ops.reduction.argreduce",
+        "category": "Reduction",
+        "passed": 5,
+        "failed": 0,
+        "skipped": 0,
+        "max_abs_err": 0.0,
+        "failing_tests": []
+      },
+      "AddFwdOp": {
+        "module": "tileops.ops.elementwise.arithmetic",
+        "category": "Elementwise",
+        "passed": 4,
+        "failed": 0,
+        "skipped": 0,
+        "max_abs_err": 0.0,
+        "failing_tests": []
+      },
+      "AddFwdKernel": {
+        "module": "tileops.kernels.elementwise.arithmetic",
+        "category": "Elementwise",
+        "passed": 1,
+        "failed": 0,
+        "skipped": 0,
+        "max_abs_err": 0.0,
+        "failing_tests": []
+      },
+      "BitwiseAndFwdOp": {
+        "module": "tileops.ops.elementwise.bitwise",
+        "category": "Elementwise",
+        "passed": 1,
+        "failed": 0,
+        "skipped": 0,
+        "max_abs_err": 0.0,
+        "failing_tests": []
+      },
+      "BitwiseOrFwdOp": {
+        "module": "tileops.ops.elementwise.bitwise",
+        "category": "Elementwise",
+        "passed": 1,
+        "failed": 0,
+        "skipped": 0,
+        "max_abs_err": 0.0,
+        "failing_tests": []
+      },
+      "BitwiseXorFwdOp": {
+        "module": "tileops.ops.elementwise.bitwise",
+        "category": "Elementwise",
+        "passed": 1,
+        "failed": 0,
+        "skipped": 0,
+        "max_abs_err": 0.0,
+        "failing_tests": []
+      },
+      "BmmFwdOp": {
+        "module": "tileops.ops.gemm.bmm",
+        "category": "GEMM",
+        "passed": 9,
+        "failed": 0,
+        "skipped": 0,
+        "max_abs_err": 0.0,
+        "failing_tests": []
+      },
+      "BmmFp8KNFwdOp": {
+        "module": "tileops.ops.gemm.bmm",
+        "category": "GEMM",
+        "passed": 2,
+        "failed": 0,
+        "skipped": 0,
+        "max_abs_err": 0.0312,
+        "failing_tests": []
+      },
+      "Conv1dFwdOp": {
+        "module": "tileops.ops.convolution",
+        "category": "Conv",
+        "passed": 11,
+        "failed": 0,
+        "skipped": 0,
+        "max_abs_err": 0.125,
+        "failing_tests": []
+      },
+      "Conv2dFwdOp": {
+        "module": "tileops.ops.convolution",
+        "category": "Conv",
+        "passed": 11,
+        "failed": 0,
+        "skipped": 0,
+        "max_abs_err": 0.0625,
+        "failing_tests": []
+      },
+      "Conv3dFwdOp": {
+        "module": "tileops.ops.convolution",
+        "category": "Conv",
+        "passed": 5,
+        "failed": 0,
+        "skipped": 0,
+        "max_abs_err": 0.125,
+        "failing_tests": []
+      },
+      "CumsumFwdOp": {
+        "module": "tileops.ops.reduction.cumulative",
+        "category": "Reduction",
+        "passed": 5,
+        "failed": 0,
+        "skipped": 0,
+        "max_abs_err": 0.5,
+        "failing_tests": []
+      },
+      "CumprodFwdOp": {
+        "module": "tileops.ops.reduction.cumulative",
+        "category": "Reduction",
+        "passed": 5,
+        "failed": 0,
+        "skipped": 0,
+        "max_abs_err": 0.00195,
+        "failing_tests": []
+      },
+      "DeltaNetDecodeFwdOp": {
+        "module": "tileops.ops.linear_attention.deltanet_recurrence",
+        "category": "Other",
+        "passed": 6,
+        "failed": 0,
+        "skipped": 0,
+        "max_abs_err": 9.54e-07,
+        "failing_tests": []
+      },
+      "function": {
+        "module": "builtins",
+        "category": "Other",
+        "passed": 8,
+        "failed": 0,
+        "skipped": 0,
+        "max_abs_err": 0.000488,
+        "failing_tests": []
+      },
+      "EngramGateConvFwdOp": {
+        "module": "tileops.ops.sequence_modeling.engram",
+        "category": "Other",
+        "passed": 2,
+        "failed": 0,
+        "skipped": 0,
+        "max_abs_err": 0.0177,
+        "failing_tests": []
+      },
+      "EngramGateConvBwdOp": {
+        "module": "tileops.ops.sequence_modeling.engram",
+        "category": "Other",
+        "passed": 3,
+        "failed": 0,
+        "skipped": 0,
+        "max_abs_err": 0.00151,
+        "failing_tests": []
+      },
+      "EngramDecodeFwdOp": {
+        "module": "tileops.ops.sequence_modeling.engram_decode",
+        "category": "Other",
+        "passed": 2,
+        "failed": 0,
+        "skipped": 0,
+        "max_abs_err": 0.0156,
+        "failing_tests": []
+      },
+      "FFTC2CFwdOp": {
+        "module": "tileops.ops.fft",
+        "category": "Transform",
+        "passed": 7,
+        "failed": 0,
+        "skipped": 0,
+        "max_abs_err": 7.86e-05,
+        "failing_tests": []
+      },
+      "FP8LightningIndexerFwdOp": {
+        "module": "tileops.ops.fp8_lightning_indexer",
+        "category": "Quantize",
+        "passed": 1,
+        "failed": 0,
+        "skipped": 0,
+        "max_abs_err": 0.0,
+        "failing_tests": []
+      },
+      "FP8QuantFwdOp": {
+        "module": "tileops.ops.fp8_quant",
+        "category": "Quantize",
+        "passed": 4,
+        "failed": 0,
+        "skipped": 0,
+        "max_abs_err": 32.0,
+        "failing_tests": []
+      },
+      "FusedAddLayerNormFwdOp": {
+        "module": "tileops.ops.norm.fused_add_layer_norm",
+        "category": "Norm",
+        "passed": 8,
+        "failed": 0,
+        "skipped": 0,
+        "max_abs_err": 0.0625,
+        "failing_tests": []
+      },
+      "FusedAddRMSNormFwdOp": {
+        "module": "tileops.ops.norm.fused_add_rms_norm",
+        "category": "Norm",
+        "passed": 11,
+        "failed": 0,
+        "skipped": 0,
+        "max_abs_err": 0.0312,
+        "failing_tests": []
+      },
+      "SiluAndMulFwdOp": {
+        "module": "tileops.ops.elementwise.activations",
+        "category": "Elementwise",
+        "passed": 2,
+        "failed": 0,
+        "skipped": 0,
+        "max_abs_err": 0.00391,
+        "failing_tests": []
+      },
+      "GeluAndMulFwdOp": {
+        "module": "tileops.ops.elementwise.activations",
+        "category": "Elementwise",
+        "passed": 1,
+        "failed": 0,
+        "skipped": 0,
+        "max_abs_err": 0.00781,
+        "failing_tests": []
+      },
+      "GeluTanhAndMulFwdOp": {
+        "module": "tileops.ops.elementwise.activations",
+        "category": "Elementwise",
+        "passed": 1,
+        "failed": 0,
+        "skipped": 0,
+        "max_abs_err": 0.00781,
+        "failing_tests": []
+      },
+      "GatedDeltaNetPrefillBHTDFwdOp": {
+        "module": "tileops.ops.linear_attention.gated_deltanet",
+        "category": "Other",
+        "passed": 2,
+        "failed": 0,
+        "skipped": 0,
+        "max_abs_err": 3.05e-05,
+        "failing_tests": []
+      },
+      "GatedDeltaNetDecodeFwdOp": {
+        "module": "tileops.ops.linear_attention.gated_deltanet",
+        "category": "Other",
+        "passed": 5,
+        "failed": 0,
+        "skipped": 0,
+        "max_abs_err": 0.000488,
+        "failing_tests": []
+      },
+      "GemmFwdOp": {
+        "module": "tileops.ops.gemm.gemm",
+        "category": "GEMM",
+        "passed": 27,
+        "failed": 0,
+        "skipped": 0,
+        "max_abs_err": 1.0,
+        "failing_tests": []
+      },
+      "GemmFp8FwdOp": {
+        "module": "tileops.ops.gemm.gemm",
+        "category": "GEMM",
+        "passed": 5,
+        "failed": 0,
+        "skipped": 0,
+        "max_abs_err": 0.125,
+        "failing_tests": []
+      },
+      "GemmW4A16FwdOp": {
+        "module": "tileops.ops.gemm.gemm",
+        "category": "GEMM",
+        "passed": 2,
+        "failed": 0,
+        "skipped": 0,
+        "max_abs_err": 0.0156,
+        "failing_tests": []
+      },
+      "GLADecodeFwdOp": {
+        "module": "tileops.ops.linear_attention.gla_recurrence",
+        "category": "Other",
+        "passed": 4,
+        "failed": 0,
+        "skipped": 0,
+        "max_abs_err": 3.05e-05,
+        "failing_tests": []
+      },
+      "GroupNormFwdOp": {
+        "module": "tileops.ops.norm.group_norm",
+        "category": "Norm",
+        "passed": 11,
+        "failed": 0,
+        "skipped": 0,
+        "max_abs_err": 1.91e-06,
+        "failing_tests": []
+      },
+      "GroupedGemmFwdOp": {
+        "module": "tileops.ops.gemm.grouped_gemm",
+        "category": "GEMM",
+        "passed": 3,
+        "failed": 0,
+        "skipped": 0,
+        "max_abs_err": 0.0,
+        "failing_tests": []
+      },
+      "InstanceNormFwdOp": {
+        "module": "tileops.ops.norm.instance_norm",
+        "category": "Norm",
+        "passed": 5,
+        "failed": 0,
+        "skipped": 0,
+        "max_abs_err": 1.91e-06,
+        "failing_tests": []
+      },
+      "LayerNormFwdOp": {
+        "module": "tileops.ops.norm.layer_norm",
+        "category": "Norm",
+        "passed": 14,
+        "failed": 0,
+        "skipped": 0,
+        "max_abs_err": 0.0312,
+        "failing_tests": []
+      },
+      "AnyFwdOp": {
+        "module": "tileops.ops.reduction.logical_reduce",
+        "category": "Reduction",
+        "passed": 7,
+        "failed": 0,
+        "skipped": 0,
+        "max_abs_err": 0.0,
+        "failing_tests": []
+      },
+      "AllFwdOp": {
+        "module": "tileops.ops.reduction.logical_reduce",
+        "category": "Reduction",
+        "passed": 7,
+        "failed": 0,
+        "skipped": 0,
+        "max_abs_err": 0.0,
+        "failing_tests": []
+      },
+      "CountNonzeroFwdOp": {
+        "module": "tileops.ops.reduction.logical_reduce",
+        "category": "Reduction",
+        "passed": 7,
+        "failed": 0,
+        "skipped": 0,
+        "max_abs_err": 0.0,
+        "failing_tests": []
+      },
+      "DaCumsumFwdOp": {
+        "module": "tileops.ops.mamba.da_cumsum",
+        "category": "Other",
+        "passed": 4,
+        "failed": 0,
+        "skipped": 0,
+        "max_abs_err": 6.1e-05,
+        "failing_tests": []
+      },
+      "SSDChunkScanFwdOp": {
+        "module": "tileops.ops.mamba.ssd_chunk_scan",
+        "category": "Other",
+        "passed": 2,
+        "failed": 0,
+        "skipped": 0,
+        "max_abs_err": 0.000302,
+        "failing_tests": []
+      },
+      "SSDChunkStateFwdOp": {
+        "module": "tileops.ops.mamba.ssd_chunk_state",
+        "category": "Other",
+        "passed": 3,
+        "failed": 0,
+        "skipped": 0,
+        "max_abs_err": 2.19e-05,
+        "failing_tests": []
+      },
+      "SSDStatePassingFwdOp": {
+        "module": "tileops.ops.mamba.ssd_state_passing",
+        "category": "Other",
+        "passed": 2,
+        "failed": 0,
+        "skipped": 0,
+        "max_abs_err": 2.98e-08,
+        "failing_tests": []
+      },
+      "MeanPoolingFwdOp": {
+        "module": "tileops.ops.pool",
+        "category": "Other",
+        "passed": 4,
+        "failed": 0,
+        "skipped": 0,
+        "max_abs_err": 6.1e-05,
+        "failing_tests": []
+      },
+      "MHCPreFwdOp": {
+        "module": "tileops.ops.sequence_modeling.mhc",
+        "category": "Other",
+        "passed": 2,
+        "failed": 0,
+        "skipped": 0,
+        "max_abs_err": 0.0312,
+        "failing_tests": []
+      },
+      "MHCPostFwdOp": {
+        "module": "tileops.ops.sequence_modeling.mhc",
+        "category": "Other",
+        "passed": 2,
+        "failed": 0,
+        "skipped": 0,
+        "max_abs_err": 0.0,
+        "failing_tests": []
+      },
+      "AvgPool1dFwdOp": {
+        "module": "tileops.ops.pool",
+        "category": "Other",
+        "passed": 2,
+        "failed": 0,
+        "skipped": 0,
+        "max_abs_err": 0.0,
+        "failing_tests": []
+      },
+      "AvgPool2dFwdOp": {
+        "module": "tileops.ops.pool",
+        "category": "Other",
+        "passed": 7,
+        "failed": 0,
+        "skipped": 0,
+        "max_abs_err": 0.0,
+        "failing_tests": []
+      },
+      "AvgPool3dFwdOp": {
+        "module": "tileops.ops.pool",
+        "category": "Other",
+        "passed": 4,
+        "failed": 0,
+        "skipped": 0,
+        "max_abs_err": 0.0,
+        "failing_tests": []
+      },
+      "MaxPool1dIndicesFwdOp": {
+        "module": "tileops.ops.pool",
+        "category": "Other",
+        "passed": 6,
+        "failed": 0,
+        "skipped": 0,
+        "max_abs_err": 0.0,
+        "failing_tests": []
+      },
+      "MaxPool2dIndicesFwdOp": {
+        "module": "tileops.ops.pool",
+        "category": "Other",
+        "passed": 5,
+        "failed": 0,
+        "skipped": 0,
+        "max_abs_err": 0.0,
+        "failing_tests": []
+      },
+      "MaxPool3dIndicesFwdOp": {
+        "module": "tileops.ops.pool",
+        "category": "Other",
+        "passed": 4,
+        "failed": 0,
+        "skipped": 0,
+        "max_abs_err": 0.0,
+        "failing_tests": []
+      },
+      "AdaptiveAvgPool2dFwdOp": {
+        "module": "tileops.ops.pool",
+        "category": "Other",
+        "passed": 4,
+        "failed": 0,
+        "skipped": 0,
+        "max_abs_err": 0.0,
+        "failing_tests": []
+      },
+      "AdaptiveMaxPool2dIndicesFwdOp": {
+        "module": "tileops.ops.pool",
+        "category": "Other",
+        "passed": 3,
+        "failed": 0,
+        "skipped": 0,
+        "max_abs_err": 0.0,
+        "failing_tests": []
+      },
+      "SumFwdOp": {
+        "module": "tileops.ops.reduction.reduce",
+        "category": "Reduction",
+        "passed": 6,
+        "failed": 0,
+        "skipped": 0,
+        "max_abs_err": 0.0,
+        "failing_tests": []
+      },
+      "ProdFwdOp": {
+        "module": "tileops.ops.reduction.reduce",
+        "category": "Reduction",
+        "passed": 6,
+        "failed": 0,
+        "skipped": 0,
+        "max_abs_err": 0.0,
+        "failing_tests": []
+      },
+      "VarFwdOp": {
+        "module": "tileops.ops.reduction.reduce",
+        "category": "Reduction",
+        "passed": 19,
+        "failed": 0,
+        "skipped": 0,
+        "max_abs_err": 0.0,
+        "failing_tests": []
+      },
+      "MeanFwdOp": {
+        "module": "tileops.ops.reduction.reduce",
+        "category": "Reduction",
+        "passed": 5,
+        "failed": 0,
+        "skipped": 0,
+        "max_abs_err": 0.0,
+        "failing_tests": []
+      },
+      "AminFwdOp": {
+        "module": "tileops.ops.reduction.reduce",
+        "category": "Reduction",
+        "passed": 5,
+        "failed": 0,
+        "skipped": 0,
+        "max_abs_err": 0.0,
+        "failing_tests": []
+      },
+      "AmaxFwdOp": {
+        "module": "tileops.ops.reduction.reduce",
+        "category": "Reduction",
+        "passed": 5,
+        "failed": 0,
+        "skipped": 0,
+        "max_abs_err": 0.0,
+        "failing_tests": []
+      },
+      "StdFwdOp": {
+        "module": "tileops.ops.reduction.reduce",
+        "category": "Reduction",
+        "passed": 17,
+        "failed": 0,
+        "skipped": 0,
+        "max_abs_err": 0.0,
+        "failing_tests": []
+      },
+      "VarMeanFwdOp": {
+        "module": "tileops.ops.reduction.reduce",
+        "category": "Reduction",
+        "passed": 17,
+        "failed": 0,
+        "skipped": 0,
+        "max_abs_err": 0.0,
+        "failing_tests": []
+      },
+      "RMSNormFwdOp": {
+        "module": "tileops.ops.norm.rms_norm",
+        "category": "Norm",
+        "passed": 10,
+        "failed": 0,
+        "skipped": 0,
+        "max_abs_err": 0.0625,
+        "failing_tests": []
+      },
+      "RopeNeoxFwdOp": {
+        "module": "tileops.ops.rope",
+        "category": "Transform",
+        "passed": 3,
+        "failed": 0,
+        "skipped": 0,
+        "max_abs_err": 0.0,
+        "failing_tests": []
+      },
+      "RopeNonNeoxFwdOp": {
+        "module": "tileops.ops.rope",
+        "category": "Transform",
+        "passed": 3,
+        "failed": 0,
+        "skipped": 0,
+        "max_abs_err": 0.0,
+        "failing_tests": []
+      },
+      "RopeLlama31FwdOp": {
+        "module": "tileops.ops.rope",
+        "category": "Transform",
+        "passed": 2,
+        "failed": 0,
+        "skipped": 0,
+        "max_abs_err": 0.0,
+        "failing_tests": []
+      },
+      "RopeYarnFwdOp": {
+        "module": "tileops.ops.rope",
+        "category": "Transform",
+        "passed": 2,
+        "failed": 0,
+        "skipped": 0,
+        "max_abs_err": 0.0,
+        "failing_tests": []
+      },
+      "RopeLongRopeFwdOp": {
+        "module": "tileops.ops.rope",
+        "category": "Transform",
+        "passed": 2,
+        "failed": 0,
+        "skipped": 0,
+        "max_abs_err": 0.0,
+        "failing_tests": []
+      },
+      "SoftmaxFwdOp": {
+        "module": "tileops.ops.reduction.softmax",
+        "category": "Reduction",
+        "passed": 24,
+        "failed": 0,
+        "skipped": 0,
+        "max_abs_err": 7.63e-06,
+        "failing_tests": []
+      },
+      "LogSoftmaxFwdOp": {
+        "module": "tileops.ops.reduction.softmax",
+        "category": "Reduction",
+        "passed": 24,
+        "failed": 0,
+        "skipped": 0,
+        "max_abs_err": 9.54e-07,
+        "failing_tests": []
+      },
+      "LogSumExpFwdOp": {
+        "module": "tileops.ops.reduction.softmax",
+        "category": "Reduction",
+        "passed": 26,
+        "failed": 0,
+        "skipped": 0,
+        "max_abs_err": 4.77e-07,
+        "failing_tests": []
+      },
+      "TopkSelectorFwdOp": {
+        "module": "tileops.ops.topk_selector",
+        "category": "Other",
+        "passed": 3,
+        "failed": 0,
+        "skipped": 0,
+        "max_abs_err": 131000.0,
+        "failing_tests": []
+      },
+      "L1NormFwdOp": {
+        "module": "tileops.ops.reduction.vector_norm",
+        "category": "Reduction",
+        "passed": 5,
+        "failed": 0,
+        "skipped": 0,
+        "max_abs_err": 3.05e-05,
+        "failing_tests": []
+      },
+      "L2NormFwdOp": {
+        "module": "tileops.ops.reduction.vector_norm",
+        "category": "Reduction",
+        "passed": 5,
+        "failed": 0,
+        "skipped": 0,
+        "max_abs_err": 1.91e-06,
+        "failing_tests": []
+      },
+      "InfNormFwdOp": {
+        "module": "tileops.ops.reduction.vector_norm",
+        "category": "Reduction",
+        "passed": 5,
+        "failed": 0,
+        "skipped": 0,
+        "max_abs_err": 0.0,
+        "failing_tests": []
+      }
+    }
+  },
+  "bench": {
+    "total_ops": 0,
+    "total_configs": 0,
+    "ops": {},
+    "failures": []
+  },
+  "categories": {
+    "Attention": {
+      "test_ops": 7,
+      "test_passed": 7,
+      "test_failed": 0,
+      "bench_ops": 0,
+      "bench_configs": 0,
+      "bench_qualified": 0,
+      "bench_underperforming": 0,
+      "bench_failed": 0,
+      "avg_ratio": null
+    },
+    "Conv": {
+      "test_ops": 3,
+      "test_passed": 3,
+      "test_failed": 0,
+      "bench_ops": 0,
+      "bench_configs": 0,
+      "bench_qualified": 0,
+      "bench_underperforming": 0,
+      "bench_failed": 0,
+      "avg_ratio": null
+    },
+    "Elementwise": {
+      "test_ops": 10,
+      "test_passed": 10,
+      "test_failed": 0,
+      "bench_ops": 0,
+      "bench_configs": 0,
+      "bench_qualified": 0,
+      "bench_underperforming": 0,
+      "bench_failed": 0,
+      "avg_ratio": null
+    },
+    "GEMM": {
+      "test_ops": 6,
+      "test_passed": 6,
+      "test_failed": 0,
+      "bench_ops": 0,
+      "bench_configs": 0,
+      "bench_qualified": 0,
+      "bench_underperforming": 0,
+      "bench_failed": 0,
+      "avg_ratio": null
+    },
+    "Norm": {
+      "test_ops": 8,
+      "test_passed": 8,
+      "test_failed": 0,
+      "bench_ops": 0,
+      "bench_configs": 0,
+      "bench_qualified": 0,
+      "bench_underperforming": 0,
+      "bench_failed": 0,
+      "avg_ratio": null
+    },
+    "Other": {
+      "test_ops": 24,
+      "test_passed": 24,
+      "test_failed": 0,
+      "bench_ops": 0,
+      "bench_configs": 0,
+      "bench_qualified": 0,
+      "bench_underperforming": 0,
+      "bench_failed": 0,
+      "avg_ratio": null
+    },
+    "Quantize": {
+      "test_ops": 2,
+      "test_passed": 2,
+      "test_failed": 0,
+      "bench_ops": 0,
+      "bench_configs": 0,
+      "bench_qualified": 0,
+      "bench_underperforming": 0,
+      "bench_failed": 0,
+      "avg_ratio": null
+    },
+    "Reduction": {
+      "test_ops": 21,
+      "test_passed": 21,
+      "test_failed": 0,
+      "bench_ops": 0,
+      "bench_configs": 0,
+      "bench_qualified": 0,
+      "bench_underperforming": 0,
+      "bench_failed": 0,
+      "avg_ratio": null
+    },
+    "Transform": {
+      "test_ops": 6,
+      "test_passed": 6,
+      "test_failed": 0,
+      "bench_ops": 0,
+      "bench_configs": 0,
+      "bench_qualified": 0,
+      "bench_underperforming": 0,
+      "bench_failed": 0,
+      "avg_ratio": null
+    }
+  },
+  "baseline_alerts": [],
+  "regressions": [],
+  "improvements": []
+}
