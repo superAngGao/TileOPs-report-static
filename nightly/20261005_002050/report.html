@@ -1,0 +1,469 @@
+<!DOCTYPE html><html lang='zh-CN'><head>
+<meta charset='UTF-8'>
+<meta name='viewport' content='width=device-width,initial-scale=1'>
+<title>TileOPs Report · 20261005_002050</title>
+<style>
+:root{--green:#22c55e;--yellow:#f59e0b;--red:#ef4444;--blue:#3b82f6;--purple:#8b5cf6;
+      --bg:#f9fafb;--card:#fff;--border:#e5e7eb;--text:#111827;--muted:#6b7280}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,sans-serif;background:var(--bg);color:var(--text);padding:1.5rem;max-width:1100px;margin:0 auto}
+h1{font-size:1.5rem;font-weight:700;margin-bottom:.25rem}
+h2{font-size:1.15rem;font-weight:600;margin:1.5rem 0 .75rem;border-bottom:2px solid var(--border);padding-bottom:.25rem}
+h3{font-size:.95rem;font-weight:600;margin:.75rem 0 .25rem}
+.meta{color:var(--muted);font-size:.82rem;margin-bottom:1.5rem}
+.card{background:var(--card);border:1px solid var(--border);border-radius:.5rem;padding:1rem 1.25rem;margin-bottom:1rem}
+/* Overall grid */
+.overall-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:.5rem;margin:.75rem 0}
+.stat-box{background:var(--card);border:1px solid var(--border);border-radius:.375rem;padding:.6rem;text-align:center}
+.stat-box .num{font-size:1.4rem;font-weight:700;line-height:1}
+.stat-box .lbl{font-size:.72rem;color:var(--muted);margin-top:.15rem}
+/* Progress bars */
+.bar-wrap{background:#e5e7eb;border-radius:9999px;height:.75rem;overflow:hidden;margin:.25rem 0;box-shadow:inset 0 1px 2px rgba(0,0,0,.08)}
+.bar-fill{height:100%;border-radius:9999px;transition:width .6s ease;min-width:2px}
+.bar-test{background:linear-gradient(90deg,#4ade80,#22c55e)}
+.bar-bench{background:linear-gradient(90deg,#a78bfa,#8b5cf6)}
+/* Stacked bars */
+.stacked-bar{display:flex;height:100%;border-radius:9999px;overflow:hidden}
+.stacked-bar .seg{height:100%;transition:width .6s ease}
+.stacked-bar .seg:first-child{border-radius:9999px 0 0 9999px}
+.stacked-bar .seg:last-child{border-radius:0 9999px 9999px 0}
+.stacked-bar .seg:only-child{border-radius:9999px}
+.seg-passed{background:linear-gradient(90deg,#4ade80,#22c55e)}.seg-failed{background:linear-gradient(90deg,#f87171,#ef4444)}
+.seg-qualified{background:linear-gradient(90deg,#a78bfa,#7c3aed)}.seg-underperforming{background:linear-gradient(90deg,#fbbf24,#f59e0b)}
+.bar-row{display:flex;align-items:center;gap:.5rem;font-size:.82rem;margin:.2rem 0}
+.bar-label{width:50px;color:var(--muted);flex-shrink:0;font-weight:500}
+.bar-container{flex:1;min-width:60px}
+.bar-count{width:140px;text-align:right;color:var(--muted);flex-shrink:0;font-size:.75rem}
+/* Category card */
+.cat-card{display:grid;grid-template-columns:1fr auto;gap:.75rem;padding:.75rem 0;border-bottom:1px solid var(--border)}
+.cat-card:last-child{border-bottom:none}
+.cat-bars{min-width:0}
+.cat-scores{display:flex;gap:.4rem;align-items:flex-start;flex-shrink:0}
+.score-badge{display:inline-flex;flex-direction:column;align-items:center;padding:.3rem .5rem;
+             border-radius:.375rem;font-size:.72rem;font-weight:600;min-width:44px}
+.score-badge .val{font-size:1.1rem;line-height:1}
+.score-perf{background:#ede9fe;color:#5b21b6}.score-func{background:#dcfce7;color:#166534}
+.score-null{background:#f3f4f6;color:#9ca3af}
+/* Tables */
+.data-table{width:100%;border-collapse:collapse;font-size:.82rem;margin:.5rem 0}
+.data-table th{text-align:left;padding:.4rem .5rem;background:#f9fafb;border-bottom:2px solid var(--border);font-weight:600;font-size:.75rem;color:var(--muted)}
+.data-table td{padding:.35rem .5rem;border-bottom:1px solid var(--border);vertical-align:middle}
+.data-table tr:hover{background:#f0f9ff}
+.badge{display:inline-block;padding:.1rem .4rem;border-radius:.25rem;font-size:.72rem;font-weight:600}
+.badge-red{background:#fee2e2;color:#991b1b}.badge-yellow{background:#fef3c7;color:#92400e}
+.badge-green{background:#dcfce7;color:#166534}.badge-blue{background:#dbeafe;color:#1e40af}
+/* Detail section */
+.detail-item{margin:.75rem 0;padding:.75rem;background:#fafafa;border-radius:.375rem;border:1px solid var(--border)}
+.detail-item h3{margin:0 0 .35rem;font-size:.88rem}
+.detail-issues{color:var(--red);font-size:.85rem;margin:.25rem 0}
+.detail-eval{font-size:.85rem;color:var(--text);margin:.25rem 0}
+/* Assessment */
+.rec-list{margin:.5rem 0;padding-left:1.25rem}
+.rec-list li{margin:.25rem 0;font-size:.88rem}
+/* Mobile */
+@media(max-width:600px){
+  body{padding:.75rem}.card{padding:.75rem}h1{font-size:1.25rem}
+  .overall-grid{grid-template-columns:repeat(3,1fr);gap:.4rem}
+  .stat-box .num{font-size:1.1rem}
+  .cat-card{grid-template-columns:1fr;gap:.5rem}
+  .cat-scores{justify-content:flex-start}
+  .data-table{font-size:.75rem}
+}
+</style>
+</head><body>
+<h1>TileOPs Nightly Report</h1>
+<p class='meta'>Date: 20261005_002050 &nbsp;|&nbsp; Commit: <code>10e653b3dac0f55ae2fa8fbcf3f1723bc6593cff</code> &nbsp;|&nbsp; Generated: 2026-10-05 00:21:05</p>
+<div class='card'>
+<h2 style='margin-top:0'>Overall Summary</h2>
+<div class='overall-grid'>
+<div class='stat-box'><div class='num'>132</div><div class='lbl'>Test Ops</div></div>
+<div class='stat-box'><div class='num' style='color:var(--green)'>1044/1044</div><div class='lbl'>Cases Pass</div></div>
+<div class='stat-box'><div class='num' style='color:var(--purple)'>186</div><div class='lbl'>Bench Ops</div></div>
+<div class='stat-box'><div class='num'>1835</div><div class='lbl'>Bench Configs</div></div>
+<div class='stat-box'><div class='num' style='color:var(--red)'>76</div><div class='lbl'>Alerts</div></div>
+<div class='stat-box'><div class='num'>9</div><div class='lbl'>Categories</div></div>
+</div>
+<div class="bar-row"><span class="bar-label">Test</span><div class="bar-container"><div class="bar-wrap"><div class="stacked-bar"><div class="seg seg-passed" style="width:100.0%"></div></div></div></div><span class="bar-count">1044✓ 0✗ 0—</span></div>
+<div class="bar-row"><span class="bar-label">Bench</span><div class="bar-container"><div class="bar-wrap"><div class="stacked-bar"><div class="seg seg-qualified" style="width:91.9%"></div><div class="seg seg-underperforming" style="width:4.0%"></div><div class="seg seg-failed" style="width:4.0%"></div></div></div></div><span class="bar-count">1734✓ 76△ 76✗</span></div>
+</div>
+<div class='card'>
+<h2 style='margin-top:0'>Category Progress</h2>
+<div class="cat-card"><div class="cat-bars">
+<h3 style="margin-bottom:.35rem">Attention (avg ratio: 1931%)</h3>
+<div class="bar-row"><span class="bar-label">Test</span><div class="bar-container"><div class="bar-wrap"><div class="stacked-bar"><div class="seg seg-passed" style="width:100.0%"></div></div></div></div><span class="bar-count">10✓ 0✗ / 10 ops</span></div>
+<div class="bar-row"><span class="bar-label">Bench</span><div class="bar-container"><div class="bar-wrap"><div class="stacked-bar"><div class="seg seg-qualified" style="width:63.4%"></div><div class="seg seg-underperforming" style="width:36.6%"></div></div></div></div><span class="bar-count">109✓ 63△ / 172 cfgs</span></div>
+</div><div class="cat-scores">
+<div class="score-badge score-null"><span class="val">—</span>Perf</div>
+<div class="score-badge score-null"><span class="val">—</span>Func</div>
+</div></div>
+<div class="cat-card"><div class="cat-bars">
+<h3 style="margin-bottom:.35rem">Conv (avg ratio: 840%)</h3>
+<div class="bar-row"><span class="bar-label">Test</span><div class="bar-container"><div class="bar-wrap"><div class="stacked-bar"><div class="seg seg-passed" style="width:100.0%"></div></div></div></div><span class="bar-count">3✓ 0✗ / 3 ops</span></div>
+<div class="bar-row"><span class="bar-label">Bench</span><div class="bar-container"><div class="bar-wrap"><div class="stacked-bar"><div class="seg seg-qualified" style="width:100.0%"></div></div></div></div><span class="bar-count">54✓ 0△ / 54 cfgs</span></div>
+</div><div class="cat-scores">
+<div class="score-badge score-null"><span class="val">—</span>Perf</div>
+<div class="score-badge score-null"><span class="val">—</span>Func</div>
+</div></div>
+<div class="cat-card"><div class="cat-bars">
+<h3 style="margin-bottom:.35rem">Elementwise (avg ratio: 184%)</h3>
+<div class="bar-row"><span class="bar-label">Test</span><div class="bar-container"><div class="bar-wrap"><div class="stacked-bar"><div class="seg seg-passed" style="width:100.0%"></div></div></div></div><span class="bar-count">52✓ 0✗ / 52 ops</span></div>
+<div class="bar-row"><span class="bar-label">Bench</span><div class="bar-container"><div class="bar-wrap"><div class="stacked-bar"><div class="seg seg-qualified" style="width:100.0%"></div></div></div></div><span class="bar-count">527✓ 0△ / 527 cfgs</span></div>
+</div><div class="cat-scores">
+<div class="score-badge score-null"><span class="val">—</span>Perf</div>
+<div class="score-badge score-null"><span class="val">—</span>Func</div>
+</div></div>
+<div class="cat-card"><div class="cat-bars">
+<h3 style="margin-bottom:.35rem">GEMM (avg ratio: 1096%)</h3>
+<div class="bar-row"><span class="bar-label">Test</span><div class="bar-container"><div class="bar-wrap"><div class="stacked-bar"><div class="seg seg-passed" style="width:100.0%"></div></div></div></div><span class="bar-count">6✓ 0✗ / 6 ops</span></div>
+<div class="bar-row"><span class="bar-label">Bench</span><div class="bar-container"><div class="bar-wrap"><div class="stacked-bar"><div class="seg seg-qualified" style="width:100.0%"></div></div></div></div><span class="bar-count">107✓ 0△ / 107 cfgs</span></div>
+</div><div class="cat-scores">
+<div class="score-badge score-null"><span class="val">—</span>Perf</div>
+<div class="score-badge score-null"><span class="val">—</span>Func</div>
+</div></div>
+<div class="cat-card"><div class="cat-bars">
+<h3 style="margin-bottom:.35rem">MoE (avg ratio: 176%)</h3>
+<div class="bar-row"><span class="bar-label">Test</span><div class="bar-container"><div class="bar-wrap"><div class="stacked-bar"><div class="seg seg-passed" style="width:100.0%"></div></div></div></div><span class="bar-count">2✓ 0✗ / 2 ops</span></div>
+<div class="bar-row"><span class="bar-label">Bench</span><div class="bar-container"><div class="bar-wrap"><div class="stacked-bar"><div class="seg seg-qualified" style="width:98.0%"></div></div></div></div><span class="bar-count">98✓ 0△ / 100 cfgs</span></div>
+</div><div class="cat-scores">
+<div class="score-badge score-null"><span class="val">—</span>Perf</div>
+<div class="score-badge score-null"><span class="val">—</span>Func</div>
+</div></div>
+<div class="cat-card"><div class="cat-bars">
+<h3 style="margin-bottom:.35rem">Norm (avg ratio: 262%)</h3>
+<div class="bar-row"><span class="bar-label">Test</span><div class="bar-container"><div class="bar-wrap"><div class="stacked-bar"><div class="seg seg-passed" style="width:100.0%"></div></div></div></div><span class="bar-count">10✓ 0✗ / 10 ops</span></div>
+<div class="bar-row"><span class="bar-label">Bench</span><div class="bar-container"><div class="bar-wrap"><div class="stacked-bar"><div class="seg seg-qualified" style="width:99.1%"></div><div class="seg seg-underperforming" style="width:0.9%"></div></div></div></div><span class="bar-count">111✓ 1△ / 112 cfgs</span></div>
+</div><div class="cat-scores">
+<div class="score-badge score-null"><span class="val">—</span>Perf</div>
+<div class="score-badge score-null"><span class="val">—</span>Func</div>
+</div></div>
+<div class="cat-card"><div class="cat-bars">
+<h3 style="margin-bottom:.35rem">Other (avg ratio: 477%)</h3>
+<div class="bar-row"><span class="bar-label">Test</span><div class="bar-container"><div class="bar-wrap"><div class="stacked-bar"><div class="seg seg-passed" style="width:100.0%"></div></div></div></div><span class="bar-count">25✓ 0✗ / 25 ops</span></div>
+<div class="bar-row"><span class="bar-label">Bench</span><div class="bar-container"><div class="bar-wrap"><div class="stacked-bar"><div class="seg seg-qualified" style="width:95.0%"></div><div class="seg seg-underperforming" style="width:0.9%"></div></div></div></div><span class="bar-count">527✓ 5△ / 555 cfgs</span></div>
+</div><div class="cat-scores">
+<div class="score-badge score-null"><span class="val">—</span>Perf</div>
+<div class="score-badge score-null"><span class="val">—</span>Func</div>
+</div></div>
+<div class="cat-card"><div class="cat-bars">
+<h3 style="margin-bottom:.35rem">Reduction (avg ratio: 550%)</h3>
+<div class="bar-row"><span class="bar-label">Test</span><div class="bar-container"><div class="bar-wrap"><div class="stacked-bar"><div class="seg seg-passed" style="width:100.0%"></div></div></div></div><span class="bar-count">19✓ 0✗ / 19 ops</span></div>
+<div class="bar-row"><span class="bar-label">Bench</span><div class="bar-container"><div class="bar-wrap"><div class="stacked-bar"><div class="seg seg-qualified" style="width:96.0%"></div><div class="seg seg-underperforming" style="width:4.0%"></div></div></div></div><span class="bar-count">168✓ 7△ / 175 cfgs</span></div>
+</div><div class="cat-scores">
+<div class="score-badge score-null"><span class="val">—</span>Perf</div>
+<div class="score-badge score-null"><span class="val">—</span>Func</div>
+</div></div>
+<div class="cat-card"><div class="cat-bars">
+<h3 style="margin-bottom:.35rem">Transform (avg ratio: 816%)</h3>
+<div class="bar-row"><span class="bar-label">Test</span><div class="bar-container"><div class="bar-wrap"><div class="stacked-bar"><div class="seg seg-passed" style="width:100.0%"></div></div></div></div><span class="bar-count">5✓ 0✗ / 5 ops</span></div>
+<div class="bar-row"><span class="bar-label">Bench</span><div class="bar-container"><div class="bar-wrap"><div class="stacked-bar"><div class="seg seg-qualified" style="width:100.0%"></div></div></div></div><span class="bar-count">33✓ 0△ / 33 cfgs</span></div>
+</div><div class="cat-scores">
+<div class="score-badge score-null"><span class="val">—</span>Perf</div>
+<div class="score-badge score-null"><span class="val">—</span>Func</div>
+</div></div>
+</div>
+<div class='card'>
+<h2 style='margin-top:0'>Benchmark Failures (76)</h2>
+<table class="data-table"><thead><tr><th>Test</th><th>Error</th></tr></thead><tbody>
+<tr><td>test_chain_speculative_sampling_bench[llama-8b-b16-n4]</td><td style="font-size:.75rem">AssertionError: flashinfer:</td></tr>
+<tr><td>test_chain_speculative_sampling_bench[llama-8b-b64-n4]</td><td style="font-size:.75rem">AssertionError: flashinfer:</td></tr>
+<tr><td>test_chain_speculative_sampling_bench[ds-v3-mtp-n1]</td><td style="font-size:.75rem">AssertionError: flashinfer:</td></tr>
+<tr><td>test_chain_speculative_sampling_bench[ds-v3-mtp-n3]</td><td style="font-size:.75rem">AssertionError: flashinfer:</td></tr>
+<tr><td>test_chain_speculative_sampling_bench[qwen3-235b-eagle-n5]</td><td style="font-size:.75rem">AssertionError: flashinfer:</td></tr>
+<tr><td>test_chain_speculative_sampling_bench[llama-8b-b17-n8]</td><td style="font-size:.75rem">AssertionError: flashinfer:</td></tr>
+<tr><td>test_chain_speculative_sampling_bench[llama2-7b-b256-n1]</td><td style="font-size:.75rem">AssertionError: flashinfer:</td></tr>
+<tr><td>test_conv2d_bench[deeplabv3-aspp-float16]</td><td style="font-size:.75rem">AssertionError: tileops: Tensor-likes are not close!
+
+Mismatched elements: 104 / 262144 (0.0%)
+Greatest absolute differe</td></tr>
+<tr><td>test_cumsum_bench[llama-13b-hidden-float32]</td><td style="font-size:.75rem">AssertionError: tileops: Tensor-likes are not close!
+
+Mismatched elements: 3 / 20971520 (0.0%)
+Greatest absolute differe</td></tr>
+<tr><td>test_mla_decode_bench[ds-v2-4k-bfloat16]</td><td style="font-size:.75rem">AssertionError: tileops: Tensor-likes are not close!
+
+Mismatched elements: 7305 / 2097152 (0.3%)
+Greatest absolute diffe</td></tr>
+<tr><td>test_mla_decode_bench[ds-v3-4k-bfloat16]</td><td style="font-size:.75rem">AssertionError: tileops: Tensor-likes are not close!
+
+Mismatched elements: 3668 / 1048576 (0.3%)
+Greatest absolute diffe</td></tr>
+<tr><td>test_mla_decode_bench[ds-v3-single-request-bfloat16]</td><td style="font-size:.75rem">AssertionError: tileops: Tensor-likes are not close!
+
+Mismatched elements: 247 / 65536 (0.4%)
+Greatest absolute differen</td></tr>
+<tr><td>test_mla_decode_bench[ds-v3-serving-batch-bfloat16]</td><td style="font-size:.75rem">AssertionError: tileops: Tensor-likes are not close!
+
+Mismatched elements: 618 / 786432 (0.1%)
+Greatest absolute differe</td></tr>
+<tr><td>test_mla_decode_bench[ds-mla-b128-4096-bfloat16]</td><td style="font-size:.75rem">AssertionError: tileops: Tensor-likes are not close!
+
+Mismatched elements: 178 / 8388608 (0.0%)
+Greatest absolute differ</td></tr>
+<tr><td>test_mla_decode_bench[ds-mla-b128-8192-bfloat16]</td><td style="font-size:.75rem">AssertionError: tileops: Tensor-likes are not close!
+
+Mismatched elements: 1 / 8388608 (0.0%)
+Greatest absolute differen</td></tr>
+<tr><td>test_mla_decode_bench[deepseek-mla-tp-batch1-bfloat16]</td><td style="font-size:.75rem">AssertionError: tileops: Tensor-likes are not close!
+
+Mismatched elements: 128 / 32768 (0.4%)
+Greatest absolute differen</td></tr>
+<tr><td>test_mla_decode_bench[deepseek-mla-tp-batch2-bfloat16]</td><td style="font-size:.75rem">AssertionError: tileops: Tensor-likes are not close!
+
+Mismatched elements: 257 / 65536 (0.4%)
+Greatest absolute differen</td></tr>
+<tr><td>test_mla_decode_bench[deepseek-mla-tp-batch6-bfloat16]</td><td style="font-size:.75rem">AssertionError: tileops: Tensor-likes are not close!
+
+Mismatched elements: 568 / 196608 (0.3%)
+Greatest absolute differe</td></tr>
+<tr><td>test_mla_decode_bench[deepseek-mla-tp-batch64-bfloat16]</td><td style="font-size:.75rem">AssertionError: tileops: Tensor-likes are not close!
+
+Mismatched elements: 6771 / 2097152 (0.3%)
+Greatest absolute diffe</td></tr>
+<tr><td>test_gated_deltanet_fwd_bench[decode-b1-float16]</td><td style="font-size:.75rem">AssertionError: flashinfer: Tensor-likes are not close!
+
+Mismatched elements: 57 / 2048 (2.8%)
+Greatest absolute differe</td></tr>
+<tr><td>test_gated_deltanet_fwd_bench[decode-b1-bfloat16]</td><td style="font-size:.75rem">AssertionError: flashinfer: Tensor-likes are not close!
+
+Mismatched elements: 922 / 2048 (45.0%)
+Greatest absolute diffe</td></tr>
+<tr><td>test_gated_deltanet_fwd_bench[decode-b8-float16]</td><td style="font-size:.75rem">AssertionError: tileops: Tensor-likes are not close!
+
+Mismatched elements: 2 / 32768 (0.0%)
+Greatest absolute difference</td></tr>
+<tr><td>test_gated_deltanet_fwd_bench[decode-b8-bfloat16]</td><td style="font-size:.75rem">AssertionError: tileops: Tensor-likes are not close!
+
+Mismatched elements: 3 / 32768 (0.0%)
+Greatest absolute difference</td></tr>
+<tr><td>test_gated_deltanet_fwd_bench[decode-fresh-bfloat16]</td><td style="font-size:.75rem">AssertionError: tileops: Tensor-likes are not close!
+
+Mismatched elements: 7 / 32768 (0.0%)
+Greatest absolute difference</td></tr>
+<tr><td>test_gated_deltanet_fwd_bench[decode-vfirst-b17-bfloat16]</td><td style="font-size:.75rem">AssertionError: tileops: Tensor-likes are not close!
+
+Mismatched elements: 1 / 26112 (0.0%)
+Greatest absolute difference</td></tr>
+<tr><td>test_gated_deltanet_fwd_bench[q35-gva-decode-b1-float16]</td><td style="font-size:.75rem">AssertionError: flashinfer: Tensor-likes are not close!
+
+Mismatched elements: 147 / 4096 (3.6%)
+Greatest absolute differ</td></tr>
+<tr><td>test_gated_deltanet_fwd_bench[q35-gva-decode-b1-bfloat16]</td><td style="font-size:.75rem">AssertionError: flashinfer: Tensor-likes are not close!
+
+Mismatched elements: 1812 / 4096 (44.2%)
+Greatest absolute diff</td></tr>
+<tr><td>test_gated_deltanet_fwd_bench[q35-gva-decode-b4-float16]</td><td style="font-size:.75rem">AssertionError: flashinfer: Tensor-likes are not close!
+
+Mismatched elements: 435 / 16384 (2.7%)
+Greatest absolute diffe</td></tr>
+<tr><td>test_gated_deltanet_fwd_bench[q35-gva-decode-b4-bfloat16]</td><td style="font-size:.75rem">AssertionError: tileops: Tensor-likes are not close!
+
+Mismatched elements: 3 / 16384 (0.0%)
+Greatest absolute difference</td></tr>
+<tr><td>test_gated_deltanet_fwd_bench[q35-gva-decode-b8-float16]</td><td style="font-size:.75rem">AssertionError: tileops: Tensor-likes are not close!
+
+Mismatched elements: 1 / 32768 (0.0%)
+Greatest absolute difference</td></tr>
+<tr><td>test_gated_deltanet_fwd_bench[q35-gva-decode-b8-bfloat16]</td><td style="font-size:.75rem">AssertionError: tileops: Tensor-likes are not close!
+
+Mismatched elements: 2 / 32768 (0.0%)
+Greatest absolute difference</td></tr>
+<tr><td>test_gated_deltanet_fwd_bench[q35-gva-decode-b16-float16]</td><td style="font-size:.75rem">AssertionError: tileops: Tensor-likes are not close!
+
+Mismatched elements: 4 / 65536 (0.0%)
+Greatest absolute difference</td></tr>
+<tr><td>test_gated_deltanet_fwd_bench[q35-gva-decode-b16-bfloat16]</td><td style="font-size:.75rem">AssertionError: tileops: Tensor-likes are not close!
+
+Mismatched elements: 4 / 65536 (0.0%)
+Greatest absolute difference</td></tr>
+<tr><td>test_gated_deltanet_fwd_bench[q35-gva-decode-b32-float16]</td><td style="font-size:.75rem">AssertionError: tileops: Tensor-likes are not close!
+
+Mismatched elements: 3 / 131072 (0.0%)
+Greatest absolute differenc</td></tr>
+<tr><td>test_gated_deltanet_fwd_bench[q35-gva-decode-b32-bfloat16]</td><td style="font-size:.75rem">AssertionError: tileops: Tensor-likes are not close!
+
+Mismatched elements: 5 / 131072 (0.0%)
+Greatest absolute differenc</td></tr>
+<tr><td>test_gated_deltanet_fwd_bench[q35-gva-decode-b64-float16]</td><td style="font-size:.75rem">AssertionError: tileops: Tensor-likes are not close!
+
+Mismatched elements: 6 / 262144 (0.0%)
+Greatest absolute differenc</td></tr>
+<tr><td>test_gated_deltanet_fwd_bench[q35-gva-decode-b64-bfloat16]</td><td style="font-size:.75rem">AssertionError: tileops: Tensor-likes are not close!
+
+Mismatched elements: 23 / 262144 (0.0%)
+Greatest absolute differen</td></tr>
+<tr><td>test_gated_deltanet_fwd_bench[q35-gva-decode-b128-float16]</td><td style="font-size:.75rem">AssertionError: tileops: Tensor-likes are not close!
+
+Mismatched elements: 14 / 524288 (0.0%)
+Greatest absolute differen</td></tr>
+<tr><td>test_gated_deltanet_fwd_bench[q35-gva-decode-b128-bfloat16]</td><td style="font-size:.75rem">AssertionError: tileops: Tensor-likes are not close!
+
+Mismatched elements: 34 / 524288 (0.0%)
+Greatest absolute differen</td></tr>
+<tr><td>test_gated_deltanet_fwd_bench[q35-gva-decode-b256-float16]</td><td style="font-size:.75rem">AssertionError: tileops: Tensor-likes are not close!
+
+Mismatched elements: 21 / 1048576 (0.0%)
+Greatest absolute differe</td></tr>
+<tr><td>test_gated_deltanet_fwd_bench[q35-gva-decode-b256-bfloat16]</td><td style="font-size:.75rem">AssertionError: tileops: Tensor-likes are not close!
+
+Mismatched elements: 75 / 1048576 (0.0%)
+Greatest absolute differe</td></tr>
+<tr><td>test_gated_deltanet_fwd_bench[q35-gva-decode-b512-float16]</td><td style="font-size:.75rem">AssertionError: tileops: Tensor-likes are not close!
+
+Mismatched elements: 64 / 2097152 (0.0%)
+Greatest absolute differe</td></tr>
+<tr><td>test_gated_deltanet_fwd_bench[q35-gva-decode-b512-bfloat16]</td><td style="font-size:.75rem">AssertionError: tileops: Tensor-likes are not close!
+
+Mismatched elements: 131 / 2097152 (0.0%)
+Greatest absolute differ</td></tr>
+<tr><td>test_gqa_bwd_bench[llama-8b-short-bfloat16]</td><td style="font-size:.75rem">AssertionError: tileops: Tensor-likes are not close!
+
+Mismatched elements: 1331 / 8388608 (0.0%)
+Greatest absolute diffe</td></tr>
+<tr><td>test_gqa_bwd_bench[llama-8b-long-bfloat16]</td><td style="font-size:.75rem">AssertionError: tileops: Tensor-likes are not close!
+
+Mismatched elements: 833 / 16777216 (0.0%)
+Greatest absolute diffe</td></tr>
+<tr><td>test_gqa_bwd_bench[llama-70b-short-float16]</td><td style="font-size:.75rem">AssertionError: tileops: Tensor-likes are not close!
+
+Mismatched elements: 8 / 1048576 (0.0%)
+Greatest absolute differen</td></tr>
+<tr><td>test_gqa_bwd_bench[llama-70b-short-bfloat16]</td><td style="font-size:.75rem">AssertionError: tileops: Tensor-likes are not close!
+
+Mismatched elements: 1281 / 8388608 (0.0%)
+Greatest absolute diffe</td></tr>
+<tr><td>test_gqa_bwd_bench[llama-70b-long-float16]</td><td style="font-size:.75rem">AssertionError: tileops: Tensor-likes are not close!
+
+Mismatched elements: 2 / 2097152 (0.0%)
+Greatest absolute differen</td></tr>
+<tr><td>test_gqa_bwd_bench[llama-70b-long-bfloat16]</td><td style="font-size:.75rem">AssertionError: tileops: Tensor-likes are not close!
+
+Mismatched elements: 701 / 16777216 (0.0%)
+Greatest absolute diffe</td></tr>
+<tr><td>test_gqa_bwd_bench[llama-8b-short-mha-bfloat16]</td><td style="font-size:.75rem">AssertionError: tileops: Tensor-likes are not close!
+
+Mismatched elements: 1329 / 8388608 (0.0%)
+Greatest absolute diffe</td></tr>
+<tr><td>test_gqa_bwd_bench[llama-8b-long-mha-bfloat16]</td><td style="font-size:.75rem">AssertionError: tileops: Tensor-likes are not close!
+
+Mismatched elements: 692 / 16777216 (0.0%)
+Greatest absolute diffe</td></tr>
+<tr><td>test_gqa_bwd_bench[llama-70b-short-mha-bfloat16]</td><td style="font-size:.75rem">AssertionError: tileops: Tensor-likes are not close!
+
+Mismatched elements: 1273 / 8388608 (0.0%)
+Greatest absolute diffe</td></tr>
+<tr><td>test_gqa_bwd_bench[llama-70b-long-mha-bfloat16]</td><td style="font-size:.75rem">AssertionError: tileops: Tensor-likes are not close!
+
+Mismatched elements: 619 / 16777216 (0.0%)
+Greatest absolute diffe</td></tr>
+<tr><td>test_int8_quant_per_block_bench[ds-v3-prefill-float16]</td><td style="font-size:.75rem">AssertionError: torch-compile: Tensor-likes are not equal!
+
+Mismatched elements: 1689 / 29360128 (0.0%)
+Greatest absolut</td></tr>
+<tr><td>test_int8_quant_per_block_bench[ds-v3-prefill-bfloat16]</td><td style="font-size:.75rem">AssertionError: torch-compile: Tensor-likes are not equal!
+
+Mismatched elements: 9016 / 29360128 (0.0%)
+Greatest absolut</td></tr>
+<tr><td>test_int8_quant_per_block_bench[ds-v3-decode-bfloat16]</td><td style="font-size:.75rem">AssertionError: torch-compile: Tensor-likes are not equal!
+
+Mismatched elements: 166 / 458752 (0.0%)
+Greatest absolute d</td></tr>
+<tr><td>test_int8_quant_per_block_bench[qwen3-235b-prefill-bfloat16]</td><td style="font-size:.75rem">AssertionError: torch-compile: Tensor-likes are not equal!
+
+Mismatched elements: 5225 / 16777216 (0.0%)
+Greatest absolut</td></tr>
+<tr><td>test_int8_quant_per_block_bench[qwen3-235b-prefill-float32]</td><td style="font-size:.75rem">AssertionError: torch-compile: Tensor-likes are not equal!
+
+Mismatched elements: 13 / 16777216 (0.0%)
+Greatest absolute </td></tr>
+<tr><td>test_int8_quant_per_block_bench[ds-v3-decode-few-tokens-bfloat16]</td><td style="font-size:.75rem">AssertionError: torch-compile: Tensor-likes are not equal!
+
+Mismatched elements: 51 / 121856 (0.0%)
+Greatest absolute di</td></tr>
+<tr><td>test_int8_quant_per_block_bench[gpt-oss-20b-prefill-bfloat16]</td><td style="font-size:.75rem">AssertionError: torch-compile: Tensor-likes are not equal!
+
+Mismatched elements: 2660 / 8640000 (0.0%)
+Greatest absolute</td></tr>
+<tr><td>test_int8_quant_per_block_bench[ragged-k-float16]</td><td style="font-size:.75rem">AssertionError: torch-compile: Tensor-likes are not equal!
+
+Mismatched elements: 269 / 4099000 (0.0%)
+Greatest absolute </td></tr>
+<tr><td>test_int8_quant_per_tensor_bench[qwen3-32b-prefill-float32]</td><td style="font-size:.75rem">AssertionError: torch-compile: quantized codes differ</td></tr>
+<tr><td>test_fused_moe_shared_expert_bench[kimi-k2-t32-bfloat16]</td><td style="font-size:.75rem">torch.OutOfMemoryError: CUDA out of memory. Tried to allocate 21.00 GiB. GPU 0 has a total capacity of 139.80 GiB of whi</td></tr>
+<tr><td>test_fused_moe_shared_expert_bench[kimi-k2-t64-bfloat16]</td><td style="font-size:.75rem">torch.OutOfMemoryError: CUDA out of memory. Tried to allocate 21.00 GiB. GPU 0 has a total capacity of 139.80 GiB of whi</td></tr>
+<tr><td>test_fused_moe_shared_expert_bench[kimi-k2-t128-bfloat16]</td><td style="font-size:.75rem">torch.OutOfMemoryError: CUDA out of memory. Tried to allocate 21.00 GiB. GPU 0 has a total capacity of 139.80 GiB of whi</td></tr>
+<tr><td>test_fused_moe_shared_expert_bench[kimi-k2-t512-bfloat16]</td><td style="font-size:.75rem">torch.OutOfMemoryError: CUDA out of memory. Tried to allocate 21.00 GiB. GPU 0 has a total capacity of 139.80 GiB of whi</td></tr>
+<tr><td>test_fused_moe_shared_expert_bench[kimi-k2-t2048-bfloat16]</td><td style="font-size:.75rem">torch.OutOfMemoryError: CUDA out of memory. Tried to allocate 21.00 GiB. GPU 0 has a total capacity of 139.80 GiB of whi</td></tr>
+<tr><td>test_fused_moe_shared_expert_bench[kimi-k2-t4096-bfloat16]</td><td style="font-size:.75rem">torch.OutOfMemoryError: CUDA out of memory. Tried to allocate 21.00 GiB. GPU 0 has a total capacity of 139.80 GiB of whi</td></tr>
+<tr><td>test_fused_moe_shared_expert_bench[ds-v3-t1-bfloat16]</td><td style="font-size:.75rem">torch.OutOfMemoryError: CUDA out of memory. Tried to allocate 14.00 GiB. GPU 0 has a total capacity of 139.80 GiB of whi</td></tr>
+<tr><td>test_fused_moe_shared_expert_bench[ds-v3-t32-bfloat16]</td><td style="font-size:.75rem">torch.OutOfMemoryError: CUDA out of memory. Tried to allocate 14.00 GiB. GPU 0 has a total capacity of 139.80 GiB of whi</td></tr>
+<tr><td>test_fused_moe_shared_expert_bench[ds-v3-t32-float16]</td><td style="font-size:.75rem">torch.OutOfMemoryError: CUDA out of memory. Tried to allocate 14.00 GiB. GPU 0 has a total capacity of 139.80 GiB of whi</td></tr>
+<tr><td>test_fused_moe_shared_expert_bench[ds-v3-t64-bfloat16]</td><td style="font-size:.75rem">torch.OutOfMemoryError: CUDA out of memory. Tried to allocate 14.00 GiB. GPU 0 has a total capacity of 139.80 GiB of whi</td></tr>
+<tr><td>test_fused_moe_shared_expert_bench[ds-v3-t128-bfloat16]</td><td style="font-size:.75rem">torch.OutOfMemoryError: CUDA out of memory. Tried to allocate 14.00 GiB. GPU 0 has a total capacity of 139.80 GiB of whi</td></tr>
+<tr><td>test_fused_moe_shared_expert_bench[ds-v3-t512-bfloat16]</td><td style="font-size:.75rem">torch.OutOfMemoryError: CUDA out of memory. Tried to allocate 14.00 GiB. GPU 0 has a total capacity of 139.80 GiB of whi</td></tr>
+<tr><td>test_fused_moe_shared_expert_bench[ds-v3-t2048-bfloat16]</td><td style="font-size:.75rem">torch.OutOfMemoryError: CUDA out of memory. Tried to allocate 14.00 GiB. GPU 0 has a total capacity of 139.80 GiB of whi</td></tr>
+<tr><td>test_fused_moe_shared_expert_bench[ds-v3-t4096-bfloat16]</td><td style="font-size:.75rem">torch.OutOfMemoryError: CUDA out of memory. Tried to allocate 14.00 GiB. GPU 0 has a total capacity of 139.80 GiB of whi</td></tr>
+</tbody></table></div>
+<div class='card'>
+<h2 style='margin-top:0'>Baseline Alerts (76 configs &lt; 80%)</h2>
+<table class="data-table"><thead><tr>
+<th>Op</th><th>Config</th><th>TileOPs (ms)</th><th>Baseline (ms)</th><th>Ratio</th><th>Via</th>
+</tr></thead><tbody>
+<tr><td><strong>DSADecodeWithKVCacheFwdOp</strong></td><td style="font-size:.75rem">test_dsa_decode_bench[mla-d512-h128-kv64k-bfloat16]</td><td>32.9078</td><td>2.9429</td><td><span class="badge badge-red">7%</span></td><td>flashmla</td></tr>
+<tr><td><strong>DSADecodeWithKVCacheFwdOp</strong></td><td style="font-size:.75rem">test_dsa_decode_bench[mla-d512-h128-kv48k-bfloat16]</td><td>31.9302</td><td>2.9310</td><td><span class="badge badge-red">8%</span></td><td>flashmla</td></tr>
+<tr><td><strong>DSADecodeWithKVCacheFwdOp</strong></td><td style="font-size:.75rem">test_dsa_decode_bench[mla-d512-h128-kv32k-bfloat16]</td><td>30.1602</td><td>2.9116</td><td><span class="badge badge-red">8%</span></td><td>flashmla</td></tr>
+<tr><td><strong>DSADecodeWithKVCacheFwdOp</strong></td><td style="font-size:.75rem">test_dsa_decode_bench[mla-d512-h64-kv64k-bfloat16]</td><td>8.5106</td><td>1.1476</td><td><span class="badge badge-red">9%</span></td><td>flashmla</td></tr>
+<tr><td><strong>DSADecodeWithKVCacheFwdOp</strong></td><td style="font-size:.75rem">test_dsa_decode_bench[mla-d512-h64-kv48k-bfloat16]</td><td>8.2489</td><td>1.0715</td><td><span class="badge badge-red">9%</span></td><td>flashmla</td></tr>
+<tr><td><strong>DSADecodeWithKVCacheFwdOp</strong></td><td style="font-size:.75rem">test_dsa_decode_bench[mla-d512-h64-kv32k-bfloat16]</td><td>7.7603</td><td>1.2607</td><td><span class="badge badge-red">9%</span></td><td>flashmla</td></tr>
+<tr><td><strong>DSADecodeWithKVCacheFwdOp</strong></td><td style="font-size:.75rem">test_dsa_decode_bench[mla-d512-h128-kv8k-bfloat16]</td><td>24.7952</td><td>2.6777</td><td><span class="badge badge-red">9%</span></td><td>flashmla</td></tr>
+<tr><td><strong>DSADecodeWithKVCacheFwdOp</strong></td><td style="font-size:.75rem">test_dsa_decode_bench[mla-d512-h64-kv8k-bfloat16]</td><td>6.3330</td><td>1.2635</td><td><span class="badge badge-red">11%</span></td><td>flashmla</td></tr>
+<tr><td><strong>NSATopKVarlenFwdOp</strong></td><td style="font-size:.75rem">test_nsa_topk_varlen_bench[prefill-long-context-float16]</td><td>12.5233</td><td>1.5102</td><td><span class="badge badge-red">12%</span></td><td>fla</td></tr>
+<tr><td><strong>NSATopKVarlenFwdOp</strong></td><td style="font-size:.75rem">test_nsa_topk_varlen_bench[prefill-long-context-bfloat16]</td><td>12.5253</td><td>1.5067</td><td><span class="badge badge-red">12%</span></td><td>fla</td></tr>
+<tr><td><strong>NSATopKVarlenFwdOp</strong></td><td style="font-size:.75rem">test_nsa_topk_varlen_bench[prefill-ragged-float16]</td><td>0.9177</td><td>0.2138</td><td><span class="badge badge-red">17%</span></td><td>fla</td></tr>
+<tr><td><strong>NSATopKVarlenFwdOp</strong></td><td style="font-size:.75rem">test_nsa_topk_varlen_bench[prefill-ragged-bfloat16]</td><td>0.9116</td><td>0.2178</td><td><span class="badge badge-red">17%</span></td><td>fla</td></tr>
+<tr><td><strong>MLADecodeWithKVCacheFwdOp</strong></td><td style="font-size:.75rem">test_mla_decode_bench[ds-v3-32k-bfloat16]</td><td>0.3945</td><td>0.0871</td><td><span class="badge badge-red">22%</span></td><td>flashinfer</td></tr>
+<tr><td><strong>FP8LightningIndexerFwdOp</strong></td><td style="font-size:.75rem">test_fp8_lightning_indexer_bench[ds-v32-indexer-decode-b1-float8_e4m3fn]</td><td>0.2891</td><td>0.0744</td><td><span class="badge badge-red">25%</span></td><td>deepgemm</td></tr>
+<tr><td><strong>NSATopKVarlenFwdOp</strong></td><td style="font-size:.75rem">test_nsa_topk_varlen_bench[prefill-4x1k-float16]</td><td>0.2739</td><td>0.1281</td><td><span class="badge badge-red">26%</span></td><td>fla</td></tr>
+<tr><td><strong>NSATopKVarlenFwdOp</strong></td><td style="font-size:.75rem">test_nsa_topk_varlen_bench[prefill-8x1k-float16]</td><td>0.5201</td><td>0.1897</td><td><span class="badge badge-red">26%</span></td><td>fla</td></tr>
+<tr><td><strong>NSATopKVarlenFwdOp</strong></td><td style="font-size:.75rem">test_nsa_topk_varlen_bench[prefill-8x1k-bfloat16]</td><td>0.5203</td><td>0.1904</td><td><span class="badge badge-red">26%</span></td><td>fla</td></tr>
+<tr><td><strong>NSATopKVarlenFwdOp</strong></td><td style="font-size:.75rem">test_nsa_topk_varlen_bench[prefill-4x1k-bfloat16]</td><td>0.2745</td><td>0.1325</td><td><span class="badge badge-red">26%</span></td><td>fla</td></tr>
+<tr><td><strong>NSATopKVarlenFwdOp</strong></td><td style="font-size:.75rem">test_nsa_topk_varlen_bench[prefill-wide-gqa-float16]</td><td>0.5239</td><td>0.2227</td><td><span class="badge badge-red">31%</span></td><td>fla</td></tr>
+<tr><td><strong>NSATopKVarlenFwdOp</strong></td><td style="font-size:.75rem">test_nsa_topk_varlen_bench[prefill-wide-gqa-bfloat16]</td><td>0.5252</td><td>0.2234</td><td><span class="badge badge-red">31%</span></td><td>fla</td></tr>
+<tr><td><strong>SoftmaxFwdOp</strong></td><td style="font-size:.75rem">test_softmax_bench[quack-throughput-131072-float16]</td><td>9.3512</td><td>3.2892</td><td><span class="badge badge-red">35%</span></td><td>flaggems</td></tr>
+<tr><td><strong>SoftmaxFwdOp</strong></td><td style="font-size:.75rem">test_softmax_bench[quack-throughput-262144-float16]</td><td>9.3416</td><td>3.3682</td><td><span class="badge badge-red">36%</span></td><td>flaggems</td></tr>
+<tr><td><strong>SoftmaxFwdOp</strong></td><td style="font-size:.75rem">test_softmax_bench[quack-throughput-131072-bfloat16]</td><td>9.4190</td><td>3.4068</td><td><span class="badge badge-red">36%</span></td><td>flaggems</td></tr>
+<tr><td><strong>SoftmaxFwdOp</strong></td><td style="font-size:.75rem">test_softmax_bench[quack-throughput-262144-bfloat16]</td><td>9.4477</td><td>3.4501</td><td><span class="badge badge-red">37%</span></td><td>flaggems</td></tr>
+<tr><td><strong>NSACompressedVarlenFwdOp</strong></td><td style="font-size:.75rem">test_nsa_compressed_fwd_varlen_bench[prefill-4x1k-float16]</td><td>0.1457</td><td>0.0550</td><td><span class="badge badge-red">37%</span></td><td>fla</td></tr>
+<tr><td><strong>NSACompressedVarlenFwdOp</strong></td><td style="font-size:.75rem">test_nsa_compressed_fwd_varlen_bench[prefill-8x1k-float16]</td><td>0.2711</td><td>0.1024</td><td><span class="badge badge-red">37%</span></td><td>fla</td></tr>
+<tr><td><strong>MLADecodeWithKVCacheFwdOp</strong></td><td style="font-size:.75rem">test_mla_decode_bench[ds-v2-32k-bfloat16]</td><td>0.3950</td><td>0.1596</td><td><span class="badge badge-red">41%</span></td><td>flashinfer</td></tr>
+<tr><td><strong>MLADecodeWithKVCacheFwdOp</strong></td><td style="font-size:.75rem">test_mla_decode_bench[ds-v2-32k-float16]</td><td>0.3950</td><td>0.1609</td><td><span class="badge badge-red">41%</span></td><td>flashinfer</td></tr>
+<tr><td><strong>MLADecodeWithKVCacheFwdOp</strong></td><td style="font-size:.75rem">test_mla_decode_bench[ds-v3-single-request-float16]</td><td>0.0565</td><td>0.0229</td><td><span class="badge badge-red">41%</span></td><td>flashinfer</td></tr>
+<tr><td><strong>MLADecodeWithKVCacheFwdOp</strong></td><td style="font-size:.75rem">test_mla_decode_bench[deepseek-mla-tp-batch1-float16]</td><td>0.0570</td><td>0.0233</td><td><span class="badge badge-red">42%</span></td><td>flashinfer</td></tr>
+<tr><td><strong>MLADecodeWithKVCacheFwdOp</strong></td><td style="font-size:.75rem">test_mla_decode_bench[deepseek-mla-tp-batch2-float16]</td><td>0.0579</td><td>0.0236</td><td><span class="badge badge-red">42%</span></td><td>flashinfer</td></tr>
+<tr><td><strong>SoftmaxFwdOp</strong></td><td style="font-size:.75rem">test_softmax_bench[quack-throughput-65536-float32]</td><td>13.1763</td><td>5.6909</td><td><span class="badge badge-red">43%</span></td><td>flaggems</td></tr>
+<tr><td><strong>MLADecodeWithKVCacheFwdOp</strong></td><td style="font-size:.75rem">test_mla_decode_bench[deepseek-mla-tp-batch6-float16]</td><td>0.0624</td><td>0.0268</td><td><span class="badge badge-red">44%</span></td><td>flashinfer</td></tr>
+<tr><td><strong>SoftmaxFwdOp</strong></td><td style="font-size:.75rem">test_softmax_bench[quack-throughput-131072-float32]</td><td>13.2293</td><td>5.9701</td><td><span class="badge badge-red">45%</span></td><td>flaggems</td></tr>
+<tr><td><strong>NSACompressedVarlenFwdOp</strong></td><td style="font-size:.75rem">test_nsa_compressed_fwd_varlen_bench[nsa-ragged-prefill-bf16-bfloat16]</td><td>0.0397</td><td>0.0343</td><td><span class="badge badge-red">45%</span></td><td>fla</td></tr>
+<tr><td><strong>SoftmaxFwdOp</strong></td><td style="font-size:.75rem">test_softmax_bench[quack-throughput-262144-float32]</td><td>13.2234</td><td>6.1716</td><td><span class="badge badge-red">47%</span></td><td>flaggems</td></tr>
+<tr><td><strong>DSADecodeWithKVCacheFwdOp</strong></td><td style="font-size:.75rem">test_dsa_decode_bench[mla-d576-h128-kv128k-bfloat16]</td><td>9.9373</td><td>5.0166</td><td><span class="badge badge-red">48%</span></td><td>flashmla</td></tr>
+<tr><td><strong>DSADecodeWithKVCacheFwdOp</strong></td><td style="font-size:.75rem">test_dsa_decode_bench[mla-d576-h128-kv96k-bfloat16]</td><td>9.8670</td><td>5.2176</td><td><span class="badge badge-red">48%</span></td><td>flashmla</td></tr>
+<tr><td><strong>DSADecodeWithKVCacheFwdOp</strong></td><td style="font-size:.75rem">test_dsa_decode_bench[mla-d576-h128-kv64k-bfloat16]</td><td>9.6723</td><td>4.9615</td><td><span class="badge badge-red">49%</span></td><td>flashmla</td></tr>
+<tr><td><strong>FP8LightningIndexerFwdOp</strong></td><td style="font-size:.75rem">test_fp8_lightning_indexer_bench[ds-index-q4096-ctx131072-float8_e4m3fn]</td><td>17.2771</td><td>8.9726</td><td><span class="badge badge-red">52%</span></td><td>deepgemm</td></tr>
+<tr><td><strong>FP8LightningIndexerFwdOp</strong></td><td style="font-size:.75rem">test_fp8_lightning_indexer_bench[ds-index-q2048-ctx131072-float8_e4m3fn]</td><td>8.7459</td><td>4.5552</td><td><span class="badge badge-red">52%</span></td><td>deepgemm</td></tr>
+<tr><td><strong>FP8LightningIndexerFwdOp</strong></td><td style="font-size:.75rem">test_fp8_lightning_indexer_bench[ds-index-q4096-ctx65536-float8_e4m3fn]</td><td>8.5162</td><td>4.4614</td><td><span class="badge badge-red">52%</span></td><td>deepgemm</td></tr>
+<tr><td><strong>DSADecodeWithKVCacheFwdOp</strong></td><td style="font-size:.75rem">test_dsa_decode_bench[mla-d576-h128-kv32k-bfloat16]</td><td>8.8315</td><td>5.1270</td><td><span class="badge badge-red">53%</span></td><td>flashmla</td></tr>
+<tr><td><strong>FP8LightningIndexerFwdOp</strong></td><td style="font-size:.75rem">test_fp8_lightning_indexer_bench[ds-index-q2048-ctx65536-float8_e4m3fn]</td><td>4.3095</td><td>2.2907</td><td><span class="badge badge-red">53%</span></td><td>deepgemm</td></tr>
+<tr><td><strong>FP8LightningIndexerFwdOp</strong></td><td style="font-size:.75rem">test_fp8_lightning_indexer_bench[ds-index-q4096-ctx32768-float8_e4m3fn]</td><td>4.1150</td><td>2.1959</td><td><span class="badge badge-red">53%</span></td><td>deepgemm</td></tr>
+<tr><td><strong>FP8LightningIndexerFwdOp</strong></td><td style="font-size:.75rem">test_fp8_lightning_indexer_bench[ds-index-q4096-ctx16384-float8_e4m3fn]</td><td>1.9402</td><td>1.0524</td><td><span class="badge badge-red">54%</span></td><td>deepgemm</td></tr>
+<tr><td><strong>FP8LightningIndexerFwdOp</strong></td><td style="font-size:.75rem">test_fp8_lightning_indexer_bench[ds-index-q2048-ctx32768-float8_e4m3fn]</td><td>2.1282</td><td>1.1560</td><td><span class="badge badge-red">54%</span></td><td>deepgemm</td></tr>
+<tr><td><strong>FP8LightningIndexerFwdOp</strong></td><td style="font-size:.75rem">test_fp8_lightning_indexer_bench[ds-index-q4096-ctx8192-float8_e4m3fn]</td><td>0.8650</td><td>0.4756</td><td><span class="badge badge-red">55%</span></td><td>deepgemm</td></tr>
+<tr><td><strong>FP8LightningIndexerFwdOp</strong></td><td style="font-size:.75rem">test_fp8_lightning_indexer_bench[ds-index-q2048-ctx16384-float8_e4m3fn]</td><td>1.0409</td><td>0.5736</td><td><span class="badge badge-red">55%</span></td><td>deepgemm</td></tr>
+<tr><td><strong>FP8LightningIndexerFwdOp</strong></td><td style="font-size:.75rem">test_fp8_lightning_indexer_bench[ds-index-q2048-ctx8192-float8_e4m3fn]</td><td>0.5042</td><td>0.2811</td><td><span class="badge badge-red">56%</span></td><td>deepgemm</td></tr>
+</tbody></table></div>
+<div class='card'>
+<h2 style='margin-top:0'>Overall Assessment</h2>
+<p style='font-size:.88rem;line-height:1.6'>No analysis available.</p>
+</div>
+<p style='text-align:center;color:var(--muted);font-size:.72rem;margin-top:1.5rem'>
+Generated by Claude &mdash; review for accuracy before acting on recommendations.
+</p>
+</body></html>

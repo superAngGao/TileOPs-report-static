@@ -1,0 +1,227 @@
+<!DOCTYPE html><html lang='zh-CN'><head>
+<meta charset='UTF-8'>
+<meta name='viewport' content='width=device-width,initial-scale=1'>
+<title>TileOPs Report · 20261009_013538</title>
+<style>
+:root{--green:#22c55e;--yellow:#f59e0b;--red:#ef4444;--blue:#3b82f6;--purple:#8b5cf6;
+      --bg:#f9fafb;--card:#fff;--border:#e5e7eb;--text:#111827;--muted:#6b7280}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,sans-serif;background:var(--bg);color:var(--text);padding:1.5rem;max-width:1100px;margin:0 auto}
+h1{font-size:1.5rem;font-weight:700;margin-bottom:.25rem}
+h2{font-size:1.15rem;font-weight:600;margin:1.5rem 0 .75rem;border-bottom:2px solid var(--border);padding-bottom:.25rem}
+h3{font-size:.95rem;font-weight:600;margin:.75rem 0 .25rem}
+.meta{color:var(--muted);font-size:.82rem;margin-bottom:1.5rem}
+.card{background:var(--card);border:1px solid var(--border);border-radius:.5rem;padding:1rem 1.25rem;margin-bottom:1rem}
+/* Overall grid */
+.overall-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:.5rem;margin:.75rem 0}
+.stat-box{background:var(--card);border:1px solid var(--border);border-radius:.375rem;padding:.6rem;text-align:center}
+.stat-box .num{font-size:1.4rem;font-weight:700;line-height:1}
+.stat-box .lbl{font-size:.72rem;color:var(--muted);margin-top:.15rem}
+/* Progress bars */
+.bar-wrap{background:#e5e7eb;border-radius:9999px;height:.75rem;overflow:hidden;margin:.25rem 0;box-shadow:inset 0 1px 2px rgba(0,0,0,.08)}
+.bar-fill{height:100%;border-radius:9999px;transition:width .6s ease;min-width:2px}
+.bar-test{background:linear-gradient(90deg,#4ade80,#22c55e)}
+.bar-bench{background:linear-gradient(90deg,#a78bfa,#8b5cf6)}
+/* Stacked bars */
+.stacked-bar{display:flex;height:100%;border-radius:9999px;overflow:hidden}
+.stacked-bar .seg{height:100%;transition:width .6s ease}
+.stacked-bar .seg:first-child{border-radius:9999px 0 0 9999px}
+.stacked-bar .seg:last-child{border-radius:0 9999px 9999px 0}
+.stacked-bar .seg:only-child{border-radius:9999px}
+.seg-passed{background:linear-gradient(90deg,#4ade80,#22c55e)}.seg-failed{background:linear-gradient(90deg,#f87171,#ef4444)}
+.seg-qualified{background:linear-gradient(90deg,#a78bfa,#7c3aed)}.seg-underperforming{background:linear-gradient(90deg,#fbbf24,#f59e0b)}
+.bar-row{display:flex;align-items:center;gap:.5rem;font-size:.82rem;margin:.2rem 0}
+.bar-label{width:50px;color:var(--muted);flex-shrink:0;font-weight:500}
+.bar-container{flex:1;min-width:60px}
+.bar-count{width:140px;text-align:right;color:var(--muted);flex-shrink:0;font-size:.75rem}
+/* Category card */
+.cat-card{display:grid;grid-template-columns:1fr auto;gap:.75rem;padding:.75rem 0;border-bottom:1px solid var(--border)}
+.cat-card:last-child{border-bottom:none}
+.cat-bars{min-width:0}
+.cat-scores{display:flex;gap:.4rem;align-items:flex-start;flex-shrink:0}
+.score-badge{display:inline-flex;flex-direction:column;align-items:center;padding:.3rem .5rem;
+             border-radius:.375rem;font-size:.72rem;font-weight:600;min-width:44px}
+.score-badge .val{font-size:1.1rem;line-height:1}
+.score-perf{background:#ede9fe;color:#5b21b6}.score-func{background:#dcfce7;color:#166534}
+.score-null{background:#f3f4f6;color:#9ca3af}
+/* Tables */
+.data-table{width:100%;border-collapse:collapse;font-size:.82rem;margin:.5rem 0}
+.data-table th{text-align:left;padding:.4rem .5rem;background:#f9fafb;border-bottom:2px solid var(--border);font-weight:600;font-size:.75rem;color:var(--muted)}
+.data-table td{padding:.35rem .5rem;border-bottom:1px solid var(--border);vertical-align:middle}
+.data-table tr:hover{background:#f0f9ff}
+.badge{display:inline-block;padding:.1rem .4rem;border-radius:.25rem;font-size:.72rem;font-weight:600}
+.badge-red{background:#fee2e2;color:#991b1b}.badge-yellow{background:#fef3c7;color:#92400e}
+.badge-green{background:#dcfce7;color:#166534}.badge-blue{background:#dbeafe;color:#1e40af}
+/* Detail section */
+.detail-item{margin:.75rem 0;padding:.75rem;background:#fafafa;border-radius:.375rem;border:1px solid var(--border)}
+.detail-item h3{margin:0 0 .35rem;font-size:.88rem}
+.detail-issues{color:var(--red);font-size:.85rem;margin:.25rem 0}
+.detail-eval{font-size:.85rem;color:var(--text);margin:.25rem 0}
+/* Assessment */
+.rec-list{margin:.5rem 0;padding-left:1.25rem}
+.rec-list li{margin:.25rem 0;font-size:.88rem}
+/* Mobile */
+@media(max-width:600px){
+  body{padding:.75rem}.card{padding:.75rem}h1{font-size:1.25rem}
+  .overall-grid{grid-template-columns:repeat(3,1fr);gap:.4rem}
+  .stat-box .num{font-size:1.1rem}
+  .cat-card{grid-template-columns:1fr;gap:.5rem}
+  .cat-scores{justify-content:flex-start}
+  .data-table{font-size:.75rem}
+}
+</style>
+</head><body>
+<h1>TileOPs Nightly Report</h1>
+<p class='meta'>Date: 20261009_013538 &nbsp;|&nbsp; Commit: <code>86c1590783b6676b3c7b3aacb4f0470e6a3d660f</code> &nbsp;|&nbsp; Generated: 2026-10-09 01:35:53</p>
+<div class='card'>
+<h2 style='margin-top:0'>Overall Summary</h2>
+<div class='overall-grid'>
+<div class='stat-box'><div class='num'>133</div><div class='lbl'>Test Ops</div></div>
+<div class='stat-box'><div class='num' style='color:var(--green)'>1027/1027</div><div class='lbl'>Cases Pass</div></div>
+<div class='stat-box'><div class='num' style='color:var(--purple)'>189</div><div class='lbl'>Bench Ops</div></div>
+<div class='stat-box'><div class='num'>1938</div><div class='lbl'>Bench Configs</div></div>
+<div class='stat-box'><div class='num' style='color:var(--red)'>89</div><div class='lbl'>Alerts</div></div>
+<div class='stat-box'><div class='num'>9</div><div class='lbl'>Categories</div></div>
+</div>
+<div class="bar-row"><span class="bar-label">Test</span><div class="bar-container"><div class="bar-wrap"><div class="stacked-bar"><div class="seg seg-passed" style="width:100.0%"></div></div></div></div><span class="bar-count">1027✓ 0✗ 0—</span></div>
+<div class="bar-row"><span class="bar-label">Bench</span><div class="bar-container"><div class="bar-wrap"><div class="stacked-bar"><div class="seg seg-qualified" style="width:95.3%"></div><div class="seg seg-underperforming" style="width:4.7%"></div></div></div></div><span class="bar-count">1824✓ 89△ 0✗</span></div>
+</div>
+<div class='card'>
+<h2 style='margin-top:0'>Category Progress</h2>
+<div class="cat-card"><div class="cat-bars">
+<h3 style="margin-bottom:.35rem">Attention (avg ratio: 1752%)</h3>
+<div class="bar-row"><span class="bar-label">Test</span><div class="bar-container"><div class="bar-wrap"><div class="stacked-bar"><div class="seg seg-passed" style="width:100.0%"></div></div></div></div><span class="bar-count">10✓ 0✗ / 10 ops</span></div>
+<div class="bar-row"><span class="bar-label">Bench</span><div class="bar-container"><div class="bar-wrap"><div class="stacked-bar"><div class="seg seg-qualified" style="width:62.0%"></div><div class="seg seg-underperforming" style="width:38.0%"></div></div></div></div><span class="bar-count">119✓ 73△ / 192 cfgs</span></div>
+</div><div class="cat-scores">
+<div class="score-badge score-null"><span class="val">—</span>Perf</div>
+<div class="score-badge score-null"><span class="val">—</span>Func</div>
+</div></div>
+<div class="cat-card"><div class="cat-bars">
+<h3 style="margin-bottom:.35rem">Conv (avg ratio: 882%)</h3>
+<div class="bar-row"><span class="bar-label">Test</span><div class="bar-container"><div class="bar-wrap"><div class="stacked-bar"><div class="seg seg-passed" style="width:100.0%"></div></div></div></div><span class="bar-count">3✓ 0✗ / 3 ops</span></div>
+<div class="bar-row"><span class="bar-label">Bench</span><div class="bar-container"><div class="bar-wrap"><div class="stacked-bar"><div class="seg seg-qualified" style="width:100.0%"></div></div></div></div><span class="bar-count">55✓ 0△ / 55 cfgs</span></div>
+</div><div class="cat-scores">
+<div class="score-badge score-null"><span class="val">—</span>Perf</div>
+<div class="score-badge score-null"><span class="val">—</span>Func</div>
+</div></div>
+<div class="cat-card"><div class="cat-bars">
+<h3 style="margin-bottom:.35rem">Elementwise (avg ratio: 184%)</h3>
+<div class="bar-row"><span class="bar-label">Test</span><div class="bar-container"><div class="bar-wrap"><div class="stacked-bar"><div class="seg seg-passed" style="width:100.0%"></div></div></div></div><span class="bar-count">52✓ 0✗ / 52 ops</span></div>
+<div class="bar-row"><span class="bar-label">Bench</span><div class="bar-container"><div class="bar-wrap"><div class="stacked-bar"><div class="seg seg-qualified" style="width:100.0%"></div></div></div></div><span class="bar-count">527✓ 0△ / 527 cfgs</span></div>
+</div><div class="cat-scores">
+<div class="score-badge score-null"><span class="val">—</span>Perf</div>
+<div class="score-badge score-null"><span class="val">—</span>Func</div>
+</div></div>
+<div class="cat-card"><div class="cat-bars">
+<h3 style="margin-bottom:.35rem">GEMM (avg ratio: 1132%)</h3>
+<div class="bar-row"><span class="bar-label">Test</span><div class="bar-container"><div class="bar-wrap"><div class="stacked-bar"><div class="seg seg-passed" style="width:100.0%"></div></div></div></div><span class="bar-count">6✓ 0✗ / 6 ops</span></div>
+<div class="bar-row"><span class="bar-label">Bench</span><div class="bar-container"><div class="bar-wrap"><div class="stacked-bar"><div class="seg seg-qualified" style="width:100.0%"></div></div></div></div><span class="bar-count">107✓ 0△ / 107 cfgs</span></div>
+</div><div class="cat-scores">
+<div class="score-badge score-null"><span class="val">—</span>Perf</div>
+<div class="score-badge score-null"><span class="val">—</span>Func</div>
+</div></div>
+<div class="cat-card"><div class="cat-bars">
+<h3 style="margin-bottom:.35rem">MoE (avg ratio: 166%)</h3>
+<div class="bar-row"><span class="bar-label">Test</span><div class="bar-container"><div class="bar-wrap"><div class="stacked-bar"><div class="seg seg-passed" style="width:100.0%"></div></div></div></div><span class="bar-count">2✓ 0✗ / 2 ops</span></div>
+<div class="bar-row"><span class="bar-label">Bench</span><div class="bar-container"><div class="bar-wrap"><div class="stacked-bar"><div class="seg seg-qualified" style="width:98.2%"></div></div></div></div><span class="bar-count">112✓ 0△ / 114 cfgs</span></div>
+</div><div class="cat-scores">
+<div class="score-badge score-null"><span class="val">—</span>Perf</div>
+<div class="score-badge score-null"><span class="val">—</span>Func</div>
+</div></div>
+<div class="cat-card"><div class="cat-bars">
+<h3 style="margin-bottom:.35rem">Norm (avg ratio: 270%)</h3>
+<div class="bar-row"><span class="bar-label">Test</span><div class="bar-container"><div class="bar-wrap"><div class="stacked-bar"><div class="seg seg-passed" style="width:100.0%"></div></div></div></div><span class="bar-count">10✓ 0✗ / 10 ops</span></div>
+<div class="bar-row"><span class="bar-label">Bench</span><div class="bar-container"><div class="bar-wrap"><div class="stacked-bar"><div class="seg seg-qualified" style="width:100.0%"></div></div></div></div><span class="bar-count">112✓ 0△ / 112 cfgs</span></div>
+</div><div class="cat-scores">
+<div class="score-badge score-null"><span class="val">—</span>Perf</div>
+<div class="score-badge score-null"><span class="val">—</span>Func</div>
+</div></div>
+<div class="cat-card"><div class="cat-bars">
+<h3 style="margin-bottom:.35rem">Other (avg ratio: 542%)</h3>
+<div class="bar-row"><span class="bar-label">Test</span><div class="bar-container"><div class="bar-wrap"><div class="stacked-bar"><div class="seg seg-passed" style="width:100.0%"></div></div></div></div><span class="bar-count">26✓ 0✗ / 26 ops</span></div>
+<div class="bar-row"><span class="bar-label">Bench</span><div class="bar-container"><div class="bar-wrap"><div class="stacked-bar"><div class="seg seg-qualified" style="width:93.7%"></div><div class="seg seg-underperforming" style="width:2.6%"></div></div></div></div><span class="bar-count">583✓ 16△ / 622 cfgs</span></div>
+</div><div class="cat-scores">
+<div class="score-badge score-null"><span class="val">—</span>Perf</div>
+<div class="score-badge score-null"><span class="val">—</span>Func</div>
+</div></div>
+<div class="cat-card"><div class="cat-bars">
+<h3 style="margin-bottom:.35rem">Reduction (avg ratio: 558%)</h3>
+<div class="bar-row"><span class="bar-label">Test</span><div class="bar-container"><div class="bar-wrap"><div class="stacked-bar"><div class="seg seg-passed" style="width:100.0%"></div></div></div></div><span class="bar-count">19✓ 0✗ / 19 ops</span></div>
+<div class="bar-row"><span class="bar-label">Bench</span><div class="bar-container"><div class="bar-wrap"><div class="stacked-bar"><div class="seg seg-qualified" style="width:100.0%"></div></div></div></div><span class="bar-count">176✓ 0△ / 176 cfgs</span></div>
+</div><div class="cat-scores">
+<div class="score-badge score-null"><span class="val">—</span>Perf</div>
+<div class="score-badge score-null"><span class="val">—</span>Func</div>
+</div></div>
+<div class="cat-card"><div class="cat-bars">
+<h3 style="margin-bottom:.35rem">Transform (avg ratio: 819%)</h3>
+<div class="bar-row"><span class="bar-label">Test</span><div class="bar-container"><div class="bar-wrap"><div class="stacked-bar"><div class="seg seg-passed" style="width:100.0%"></div></div></div></div><span class="bar-count">5✓ 0✗ / 5 ops</span></div>
+<div class="bar-row"><span class="bar-label">Bench</span><div class="bar-container"><div class="bar-wrap"><div class="stacked-bar"><div class="seg seg-qualified" style="width:100.0%"></div></div></div></div><span class="bar-count">33✓ 0△ / 33 cfgs</span></div>
+</div><div class="cat-scores">
+<div class="score-badge score-null"><span class="val">—</span>Perf</div>
+<div class="score-badge score-null"><span class="val">—</span>Func</div>
+</div></div>
+</div>
+<div class='card'>
+<h2 style='margin-top:0'>Baseline Alerts (89 configs &lt; 80%)</h2>
+<table class="data-table"><thead><tr>
+<th>Op</th><th>Config</th><th>TileOPs (ms)</th><th>Baseline (ms)</th><th>Ratio</th><th>Via</th>
+</tr></thead><tbody>
+<tr><td><strong>DSADecodeWithKVCacheFwdOp</strong></td><td style="font-size:.75rem">test_dsa_decode_bench[mla-d512-h128-kv64k-bfloat16]</td><td>32.8859</td><td>2.9248</td><td><span class="badge badge-red">7%</span></td><td>flashmla</td></tr>
+<tr><td><strong>DSADecodeWithKVCacheFwdOp</strong></td><td style="font-size:.75rem">test_dsa_decode_bench[mla-d512-h128-kv48k-bfloat16]</td><td>32.0038</td><td>2.9335</td><td><span class="badge badge-red">7%</span></td><td>flashmla</td></tr>
+<tr><td><strong>DSADecodeWithKVCacheFwdOp</strong></td><td style="font-size:.75rem">test_dsa_decode_bench[mla-d512-h128-kv32k-bfloat16]</td><td>30.1803</td><td>2.9331</td><td><span class="badge badge-red">8%</span></td><td>flashmla</td></tr>
+<tr><td><strong>DSADecodeWithKVCacheFwdOp</strong></td><td style="font-size:.75rem">test_dsa_decode_bench[mla-d512-h64-kv64k-bfloat16]</td><td>8.5110</td><td>1.2963</td><td><span class="badge badge-red">9%</span></td><td>flashmla</td></tr>
+<tr><td><strong>DSADecodeWithKVCacheFwdOp</strong></td><td style="font-size:.75rem">test_dsa_decode_bench[mla-d512-h64-kv48k-bfloat16]</td><td>8.2489</td><td>1.2958</td><td><span class="badge badge-red">9%</span></td><td>flashmla</td></tr>
+<tr><td><strong>DSADecodeWithKVCacheFwdOp</strong></td><td style="font-size:.75rem">test_dsa_decode_bench[mla-d512-h64-kv32k-bfloat16]</td><td>7.7664</td><td>1.2673</td><td><span class="badge badge-red">9%</span></td><td>flashmla</td></tr>
+<tr><td><strong>DSADecodeWithKVCacheFwdOp</strong></td><td style="font-size:.75rem">test_dsa_decode_bench[mla-d512-h128-kv8k-bfloat16]</td><td>24.7482</td><td>2.9039</td><td><span class="badge badge-red">10%</span></td><td>flashmla</td></tr>
+<tr><td><strong>DSADecodeWithKVCacheFwdOp</strong></td><td style="font-size:.75rem">test_dsa_decode_bench[mla-d512-h64-kv8k-bfloat16]</td><td>6.3294</td><td>1.2695</td><td><span class="badge badge-red">11%</span></td><td>flashmla</td></tr>
+<tr><td><strong>NSATopKVarlenFwdOp</strong></td><td style="font-size:.75rem">test_nsa_topk_varlen_bench[prefill-long-context-float16]</td><td>12.5251</td><td>1.5026</td><td><span class="badge badge-red">12%</span></td><td>fla</td></tr>
+<tr><td><strong>NSATopKVarlenFwdOp</strong></td><td style="font-size:.75rem">test_nsa_topk_varlen_bench[prefill-long-context-bfloat16]</td><td>12.5273</td><td>1.5060</td><td><span class="badge badge-red">12%</span></td><td>fla</td></tr>
+<tr><td><strong>NSATopKVarlenFwdOp</strong></td><td style="font-size:.75rem">test_nsa_topk_varlen_bench[prefill-ragged-bfloat16]</td><td>0.9159</td><td>0.2115</td><td><span class="badge badge-red">17%</span></td><td>fla</td></tr>
+<tr><td><strong>NSATopKVarlenFwdOp</strong></td><td style="font-size:.75rem">test_nsa_topk_varlen_bench[prefill-ragged-float16]</td><td>0.9147</td><td>0.2113</td><td><span class="badge badge-red">17%</span></td><td>fla</td></tr>
+<tr><td><strong>MLADecodeWithKVCacheFwdOp</strong></td><td style="font-size:.75rem">test_mla_decode_bench[ds-v3-32k-bfloat16]</td><td>0.3947</td><td>0.0874</td><td><span class="badge badge-red">22%</span></td><td>flashinfer</td></tr>
+<tr><td><strong>FP8LightningIndexerFwdOp</strong></td><td style="font-size:.75rem">test_fp8_lightning_indexer_bench[ds-v32-decode-b1-float8_e4m3fn]</td><td>0.2894</td><td>0.0740</td><td><span class="badge badge-red">25%</span></td><td>deepgemm</td></tr>
+<tr><td><strong>NSATopKVarlenFwdOp</strong></td><td style="font-size:.75rem">test_nsa_topk_varlen_bench[prefill-8x1k-float16]</td><td>0.5204</td><td>0.1890</td><td><span class="badge badge-red">26%</span></td><td>fla</td></tr>
+<tr><td><strong>NSATopKVarlenFwdOp</strong></td><td style="font-size:.75rem">test_nsa_topk_varlen_bench[prefill-8x1k-bfloat16]</td><td>0.5210</td><td>0.1886</td><td><span class="badge badge-red">26%</span></td><td>fla</td></tr>
+<tr><td><strong>NSATopKVarlenFwdOp</strong></td><td style="font-size:.75rem">test_nsa_topk_varlen_bench[prefill-4x1k-float16]</td><td>0.2739</td><td>0.1242</td><td><span class="badge badge-red">26%</span></td><td>fla</td></tr>
+<tr><td><strong>NSATopKVarlenFwdOp</strong></td><td style="font-size:.75rem">test_nsa_topk_varlen_bench[prefill-4x1k-bfloat16]</td><td>0.2742</td><td>0.1247</td><td><span class="badge badge-red">26%</span></td><td>fla</td></tr>
+<tr><td><strong>NSATopKVarlenFwdOp</strong></td><td style="font-size:.75rem">test_nsa_topk_varlen_bench[prefill-wide-gqa-float16]</td><td>0.5232</td><td>0.2163</td><td><span class="badge badge-red">31%</span></td><td>fla</td></tr>
+<tr><td><strong>NSATopKVarlenFwdOp</strong></td><td style="font-size:.75rem">test_nsa_topk_varlen_bench[prefill-wide-gqa-bfloat16]</td><td>0.5243</td><td>0.2204</td><td><span class="badge badge-red">31%</span></td><td>fla</td></tr>
+<tr><td><strong>NSACompressedVarlenFwdOp</strong></td><td style="font-size:.75rem">test_nsa_compressed_fwd_varlen_bench[prefill-4x1k-float16]</td><td>0.1459</td><td>0.0553</td><td><span class="badge badge-red">37%</span></td><td>fla</td></tr>
+<tr><td><strong>NSACompressedVarlenFwdOp</strong></td><td style="font-size:.75rem">test_nsa_compressed_fwd_varlen_bench[prefill-8x1k-float16]</td><td>0.2710</td><td>0.1021</td><td><span class="badge badge-red">37%</span></td><td>fla</td></tr>
+<tr><td><strong>MLADecodeWithKVCacheFwdOp</strong></td><td style="font-size:.75rem">test_mla_decode_bench[ds-v2-32k-bfloat16]</td><td>0.3953</td><td>0.1591</td><td><span class="badge badge-red">40%</span></td><td>flashinfer</td></tr>
+<tr><td><strong>MLADecodeWithKVCacheFwdOp</strong></td><td style="font-size:.75rem">test_mla_decode_bench[ds-v2-32k-float16]</td><td>0.3955</td><td>0.1606</td><td><span class="badge badge-red">41%</span></td><td>flashinfer</td></tr>
+<tr><td><strong>MLADecodeWithKVCacheFwdOp</strong></td><td style="font-size:.75rem">test_mla_decode_bench[ds-v3-single-request-float16]</td><td>0.0565</td><td>0.0227</td><td><span class="badge badge-red">41%</span></td><td>flashinfer</td></tr>
+<tr><td><strong>MLADecodeWithKVCacheFwdOp</strong></td><td style="font-size:.75rem">test_mla_decode_bench[ds-v3-single-request-bfloat16]</td><td>0.0566</td><td>0.0228</td><td><span class="badge badge-red">41%</span></td><td>flashinfer</td></tr>
+<tr><td><strong>MLADecodeWithKVCacheFwdOp</strong></td><td style="font-size:.75rem">test_mla_decode_bench[mla-tp-b1-float16]</td><td>0.0571</td><td>0.0233</td><td><span class="badge badge-red">42%</span></td><td>flashinfer</td></tr>
+<tr><td><strong>MLADecodeWithKVCacheFwdOp</strong></td><td style="font-size:.75rem">test_mla_decode_bench[mla-tp-b1-bfloat16]</td><td>0.0572</td><td>0.0233</td><td><span class="badge badge-red">42%</span></td><td>flashinfer</td></tr>
+<tr><td><strong>MLADecodeWithKVCacheFwdOp</strong></td><td style="font-size:.75rem">test_mla_decode_bench[mla-tp-b2-float16]</td><td>0.0580</td><td>0.0237</td><td><span class="badge badge-red">42%</span></td><td>flashinfer</td></tr>
+<tr><td><strong>MLADecodeWithKVCacheFwdOp</strong></td><td style="font-size:.75rem">test_mla_decode_bench[mla-tp-b2-bfloat16]</td><td>0.0580</td><td>0.0238</td><td><span class="badge badge-red">42%</span></td><td>flashinfer</td></tr>
+<tr><td><strong>MLADecodeWithKVCacheFwdOp</strong></td><td style="font-size:.75rem">test_mla_decode_bench[mla-tp-b6-float16]</td><td>0.0625</td><td>0.0267</td><td><span class="badge badge-red">44%</span></td><td>flashinfer</td></tr>
+<tr><td><strong>MLADecodeWithKVCacheFwdOp</strong></td><td style="font-size:.75rem">test_mla_decode_bench[mla-tp-b6-bfloat16]</td><td>0.0624</td><td>0.0268</td><td><span class="badge badge-red">44%</span></td><td>flashinfer</td></tr>
+<tr><td><strong>KDAFwdOp</strong></td><td style="font-size:.75rem">test_kda_fwd_bench[kda-tp8-65536-bfloat16]</td><td>6.1262</td><td>2.9925</td><td><span class="badge badge-red">45%</span></td><td>fla</td></tr>
+<tr><td><strong>NSACompressedVarlenFwdOp</strong></td><td style="font-size:.75rem">test_nsa_compressed_fwd_varlen_bench[prefill-ragged-bfloat16]</td><td>0.0396</td><td>0.0354</td><td><span class="badge badge-red">46%</span></td><td>fla</td></tr>
+<tr><td><strong>KDAFwdOp</strong></td><td style="font-size:.75rem">test_kda_fwd_bench[kda-tp8-16384-bfloat16]</td><td>1.7029</td><td>1.4064</td><td><span class="badge badge-red">46%</span></td><td>fla</td></tr>
+<tr><td><strong>DSADecodeWithKVCacheFwdOp</strong></td><td style="font-size:.75rem">test_dsa_decode_bench[mla-d576-h128-kv128k-bfloat16]</td><td>9.9291</td><td>5.2301</td><td><span class="badge badge-red">48%</span></td><td>flashmla</td></tr>
+<tr><td><strong>DSADecodeWithKVCacheFwdOp</strong></td><td style="font-size:.75rem">test_dsa_decode_bench[mla-d576-h128-kv96k-bfloat16]</td><td>9.8551</td><td>5.2248</td><td><span class="badge badge-red">48%</span></td><td>flashmla</td></tr>
+<tr><td><strong>DSADecodeWithKVCacheFwdOp</strong></td><td style="font-size:.75rem">test_dsa_decode_bench[mla-d576-h128-kv64k-bfloat16]</td><td>9.6822</td><td>5.1662</td><td><span class="badge badge-red">49%</span></td><td>flashmla</td></tr>
+<tr><td><strong>FP8LightningIndexerFwdOp</strong></td><td style="font-size:.75rem">test_fp8_lightning_indexer_bench[index-q4096-ctx131072-float8_e4m3fn]</td><td>17.2793</td><td>8.9393</td><td><span class="badge badge-red">52%</span></td><td>deepgemm</td></tr>
+<tr><td><strong>FP8LightningIndexerFwdOp</strong></td><td style="font-size:.75rem">test_fp8_lightning_indexer_bench[index-q2048-ctx131072-float8_e4m3fn]</td><td>8.7336</td><td>4.5437</td><td><span class="badge badge-red">52%</span></td><td>deepgemm</td></tr>
+<tr><td><strong>KDAFwdOp</strong></td><td style="font-size:.75rem">test_kda_fwd_bench[kda-tp8-1024-7168-bfloat16]</td><td>0.7644</td><td>1.8409</td><td><span class="badge badge-red">52%</span></td><td>fla</td></tr>
+<tr><td><strong>KDAFwdOp</strong></td><td style="font-size:.75rem">test_kda_fwd_bench[kda-tp8-4096-bfloat16]</td><td>0.5703</td><td>1.0910</td><td><span class="badge badge-red">53%</span></td><td>fla</td></tr>
+<tr><td><strong>FP8LightningIndexerFwdOp</strong></td><td style="font-size:.75rem">test_fp8_lightning_indexer_bench[index-q4096-ctx65536-float8_e4m3fn]</td><td>8.4998</td><td>4.4696</td><td><span class="badge badge-red">53%</span></td><td>deepgemm</td></tr>
+<tr><td><strong>DSADecodeWithKVCacheFwdOp</strong></td><td style="font-size:.75rem">test_dsa_decode_bench[mla-d576-h128-kv32k-bfloat16]</td><td>8.8354</td><td>5.1131</td><td><span class="badge badge-red">53%</span></td><td>flashmla</td></tr>
+<tr><td><strong>FP8LightningIndexerFwdOp</strong></td><td style="font-size:.75rem">test_fp8_lightning_indexer_bench[index-q2048-ctx65536-float8_e4m3fn]</td><td>4.3203</td><td>2.2895</td><td><span class="badge badge-red">53%</span></td><td>deepgemm</td></tr>
+<tr><td><strong>FP8LightningIndexerFwdOp</strong></td><td style="font-size:.75rem">test_fp8_lightning_indexer_bench[index-q4096-ctx32768-float8_e4m3fn]</td><td>4.1123</td><td>2.1927</td><td><span class="badge badge-red">53%</span></td><td>deepgemm</td></tr>
+<tr><td><strong>FP8LightningIndexerFwdOp</strong></td><td style="font-size:.75rem">test_fp8_lightning_indexer_bench[index-q4096-ctx16384-float8_e4m3fn]</td><td>1.9397</td><td>1.0505</td><td><span class="badge badge-red">54%</span></td><td>deepgemm</td></tr>
+<tr><td><strong>FP8LightningIndexerFwdOp</strong></td><td style="font-size:.75rem">test_fp8_lightning_indexer_bench[index-q2048-ctx32768-float8_e4m3fn]</td><td>2.1259</td><td>1.1563</td><td><span class="badge badge-red">54%</span></td><td>deepgemm</td></tr>
+<tr><td><strong>FP8LightningIndexerFwdOp</strong></td><td style="font-size:.75rem">test_fp8_lightning_indexer_bench[index-q2048-ctx16384-float8_e4m3fn]</td><td>1.0416</td><td>0.5696</td><td><span class="badge badge-red">55%</span></td><td>deepgemm</td></tr>
+<tr><td><strong>KDAFwdOp</strong></td><td style="font-size:.75rem">test_kda_fwd_bench[kda-tp4-16384-bfloat16]</td><td>1.8688</td><td>1.4329</td><td><span class="badge badge-red">55%</span></td><td>fla</td></tr>
+</tbody></table></div>
+<div class='card'>
+<h2 style='margin-top:0'>Overall Assessment</h2>
+<p style='font-size:.88rem;line-height:1.6'>No analysis available.</p>
+</div>
+<p style='text-align:center;color:var(--muted);font-size:.72rem;margin-top:1.5rem'>
+Generated by Claude &mdash; review for accuracy before acting on recommendations.
+</p>
+</body></html>
