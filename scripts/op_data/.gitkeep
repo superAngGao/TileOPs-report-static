@@ -1,0 +1,3 @@
+# 此目录存放每个算子的详细 YAML 记录。
+# 文件由 bootstrap_registry.py 初始化，由 nightly 工作流每日更新。
+# 文件命名规则：<op_id>.yaml（如 ew.binary_arith.add.yaml）
