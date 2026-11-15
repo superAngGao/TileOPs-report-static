@@ -2875018,6 +2875018,218 @@
           }
         }
       }
+    },
+    {
+      "date": "20261115_012701",
+      "commit": "abe2086ef84995b399b69c7be273cd110dfb4092",
+      "ops": {
+        "ArgmaxFwdOp": {
+          "test_argmax_bench[lm-head-float16]": {
+            "tileops_latency_ms": 0.031872,
+            "tileops_tflops": 0.107563,
+            "tileops_bandwidth_tbs": 0.215134,
+            "baseline_latency_ms": 0.029152,
+            "baseline_tflops": 0.0140505,
+            "baseline_ratio": 7.6555,
+            "baseline_tag": "flaggems",
+            "flaggems_latency_ms": 0.029152,
+            "torch_latency_ms": 0.035904,
+            "torch-compile_latency_ms": 0.029025,
+            "baseline_tags": [
+              "flaggems",
+              "torch",
+              "torch-compile"
+            ]
+          },
+          "test_argmax_bench[lm-head-bfloat16]": {
+            "tileops_latency_ms": 0.03464,
+            "tileops_tflops": 0.107563,
+            "tileops_bandwidth_tbs": 0.215134,
+            "baseline_latency_ms": 0.027232,
+            "baseline_tflops": 0.0150411,
+            "baseline_ratio": 7.1513,
+            "baseline_tag": "flaggems",
+            "flaggems_latency_ms": 0.027232,
+            "torch_latency_ms": 0.0364485,
+            "torch-compile_latency_ms": 0.0294075,
+            "baseline_tags": [
+              "flaggems",
+              "torch",
+              "torch-compile"
+            ]
+          },
+          "test_argmax_bench[hidden-state-float16]": {
+            "tileops_latency_ms": 0.0072,
+            "tileops_tflops": 1.16508,
+            "tileops_bandwidth_tbs": 2.33244,
+            "baseline_latency_ms": 0.01152,
+            "baseline_tflops": 0.728178,
+            "baseline_ratio": 1.6,
+            "baseline_tag": "flaggems",
+            "flaggems_latency_ms": 0.01152,
+            "torch_latency_ms": 0.023648,
+            "torch-compile_latency_ms": 0.01888,
+            "baseline_tags": [
+              "flaggems",
+              "torch",
+              "torch-compile"
+            ]
+          },
+          "test_argmax_bench[hidden-state-bfloat16]": {
+            "tileops_latency_ms": 0.0073275,
+            "tileops_tflops": 1.14481,
+            "tileops_bandwidth_tbs": 2.29186,
+            "baseline_latency_ms": 0.011104,
+            "baseline_tflops": 0.755458,
+            "baseline_ratio": 1.5154,
+            "baseline_tag": "flaggems",
+            "flaggems_latency_ms": 0.011104,
+            "torch_latency_ms": 0.023936,
+            "torch-compile_latency_ms": 0.019136,
+            "baseline_tags": [
+              "flaggems",
+              "torch",
+              "torch-compile"
+            ]
+          },
+          "test_argmax_bench[3d-non-last-axis-float16]": {
+            "tileops_latency_ms": 0.0032,
+            "tileops_tflops": 0.65536,
+            "tileops_bandwidth_tbs": 2.62144,
+            "baseline_latency_ms": 0.0032,
+            "baseline_tflops": 0.65536,
+            "baseline_ratio": 1.0,
+            "baseline_tag": "flaggems",
+            "flaggems_latency_ms": 0.0032,
+            "torch_latency_ms": 0.011391,
+            "torch-compile_latency_ms": 0.003936,
+            "baseline_tags": [
+              "flaggems",
+              "torch",
+              "torch-compile"
+            ]
+          },
+          "test_argmax_bench[llama-8b-lm-head-float32]": {
+            "tileops_latency_ms": 0.033904,
+            "tileops_tflops": 0.0735413,
+            "tileops_bandwidth_tbs": 0.29417,
+            "baseline_latency_ms": 0.035232,
+            "baseline_tflops": 0.0145613,
+            "baseline_ratio": 5.0505,
+            "baseline_tag": "flaggems",
+            "flaggems_latency_ms": 0.035232,
+            "torch_latency_ms": 0.0442405,
+            "torch-compile_latency_ms": 0.037888,
+            "baseline_tags": [
+              "flaggems",
+              "torch",
+              "torch-compile"
+            ]
+          }
+        },
+        "ArgminFwdOp": {
+          "test_argmin_bench[lm-head-float16]": {
+            "tileops_latency_ms": 0.033088,
+            "tileops_tflops": 0.106667,
+            "tileops_bandwidth_tbs": 0.213342,
+            "baseline_latency_ms": 0.115552,
+            "baseline_tflops": 0.00354472,
+            "baseline_ratio": 30.0917,
+            "baseline_tag": "flaggems",
+            "flaggems_latency_ms": 0.115552,
+            "torch_latency_ms": 0.035872,
+            "torch-compile_latency_ms": 0.028944,
+            "baseline_tags": [
+              "flaggems",
+              "torch",
+              "torch-compile"
+            ]
+          },
+          "test_argmin_bench[lm-head-bfloat16]": {
+            "tileops_latency_ms": 0.0336165,
+            "tileops_tflops": 0.0628944,
+            "tileops_bandwidth_tbs": 0.125794,
+            "baseline_latency_ms": 0.102864,
+            "baseline_tflops": 0.00398194,
+            "baseline_ratio": 15.7949,
+            "baseline_tag": "flaggems",
+            "flaggems_latency_ms": 0.102864,
+            "torch_latency_ms": 0.036576,
+            "torch-compile_latency_ms": 0.029441,
+            "baseline_tags": [
+              "flaggems",
+              "torch",
+              "torch-compile"
+            ]
+          },
+          "test_argmin_bench[hidden-state-float16]": {
+            "tileops_latency_ms": 0.007232,
+            "tileops_tflops": 1.15993,
+            "tileops_bandwidth_tbs": 2.32212,
+            "baseline_latency_ms": 0.008576,
+            "baseline_tflops": 0.978149,
+            "baseline_ratio": 1.1858,
+            "baseline_tag": "flaggems",
+            "flaggems_latency_ms": 0.008576,
+            "torch_latency_ms": 0.0236485,
+            "torch-compile_latency_ms": 0.018848,
+            "baseline_tags": [
+              "flaggems",
+              "torch",
+              "torch-compile"
+            ]
+          },
+          "test_argmin_bench[hidden-state-bfloat16]": {
+            "tileops_latency_ms": 0.007392,
+            "tileops_tflops": 1.13482,
+            "tileops_bandwidth_tbs": 2.27186,
+            "baseline_latency_ms": 0.008512,
+            "baseline_tflops": 0.985504,
+            "baseline_ratio": 1.1515,
+            "baseline_tag": "flaggems",
+            "flaggems_latency_ms": 0.008512,
+            "torch_latency_ms": 0.023904,
+            "torch-compile_latency_ms": 0.019263,
+            "baseline_tags": [
+              "flaggems",
+              "torch",
+              "torch-compile"
+            ]
+          },
+          "test_argmin_bench[3d-non-last-axis-float16]": {
+            "tileops_latency_ms": 0.003264,
+            "tileops_tflops": 0.64251,
+            "tileops_bandwidth_tbs": 2.57004,
+            "baseline_latency_ms": 0.0113915,
+            "baseline_tflops": 0.184098,
+            "baseline_ratio": 3.49,
+            "baseline_tag": "torch",
+            "torch_latency_ms": 0.0113915,
+            "torch-compile_latency_ms": 0.0032965,
+            "baseline_tags": [
+              "torch",
+              "torch-compile"
+            ]
+          },
+          "test_argmin_bench[llama-8b-lm-head-float32]": {
+            "tileops_latency_ms": 0.038208,
+            "tileops_tflops": 0.0735413,
+            "tileops_bandwidth_tbs": 0.29417,
+            "baseline_latency_ms": 0.195104,
+            "baseline_tflops": 0.00262949,
+            "baseline_ratio": 27.9679,
+            "baseline_tag": "flaggems",
+            "flaggems_latency_ms": 0.195104,
+            "torch_latency_ms": 0.044192,
+            "torch-compile_latency_ms": 0.0377925,
+            "baseline_tags": [
+              "flaggems",
+              "torch",
+              "torch-compile"
+            ]
+          }
+        }
+      }
     }
   ]
 }
