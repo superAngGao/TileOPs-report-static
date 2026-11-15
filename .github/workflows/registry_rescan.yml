@@ -1,0 +1,61 @@
+name: Registry File Rescan (Weekly)
+
+# 每周日扫描 TileOPs 代码库，用 Claude 重建文件映射并 push 回 main。
+# 可手动触发以立即更新。
+
+on:
+  schedule:
+    - cron: "0 20 * * 0"   # 每周日 20:00 UTC（在 nightly report 之前）
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  rescan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout report repo (main)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install anthropic pyyaml
+
+      - name: Checkout TileOPs source
+        uses: actions/checkout@v4
+        with:
+          repository: tile-ai/TileOPs
+          path: TileOPs/
+          fetch-depth: 1
+
+      - name: Run bootstrap_registry.py (file mapping rescan)
+        run: |
+          python scripts/bootstrap_registry.py \
+            --manifest    scripts/op_manifest.json \
+            --repo-dir    TileOPs/ \
+            --registry    scripts/op_registry.json \
+            --op-data-dir scripts/op_data/
+        env:
+          ANTHROPIC_API_KEY:  ${{ secrets.ANTHROPIC_API_KEY }}
+          ANTHROPIC_BASE_URL: ${{ secrets.ANTHROPIC_BASE_URL }}
+
+      - name: Commit and push registry to main
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add scripts/op_registry.json scripts/op_data/
+          if git diff --staged --quiet; then
+            echo "No file mapping changes detected."
+          else
+            git commit -m "registry: weekly file mapping rescan $(date +%Y-%m-%d)"
+            git push origin main
+            echo "Registry updated and pushed."
+          fi

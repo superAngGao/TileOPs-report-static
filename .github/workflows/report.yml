@@ -1,0 +1,420 @@
+name: Nightly Report
+
+on:
+  schedule:
+    - cron: "0 22 * * *"   # 22:00 UTC daily, ~4h after TileOPs nightly (18:00 UTC)
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: "TileOPs nightly run ID (leave empty for latest)"
+        required: false
+      registry_only:
+        description: "Update registry + regenerate report from latest data (no new artifacts)"
+        type: boolean
+        default: false
+      force:
+        description: "Skip dedup check (force re-run even if run_id was already processed)"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: nightly-report
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout report repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Python dependencies
+        run: pip install anthropic pyyaml
+
+      - name: Determine run mode
+        id: mode
+        run: |
+          if [ "${{ github.event.inputs.registry_only }}" = "true" ]; then
+            echo "registry_only=true" >> "$GITHUB_OUTPUT"
+            echo "Mode: registry-only (update registry + regenerate report from latest data)"
+          else
+            echo "registry_only=false" >> "$GITHUB_OUTPUT"
+            echo "Mode: full nightly report"
+          fi
+
+      # ── Full mode: find nightly run + dedup ──────────────────────────────
+
+      - name: Find target nightly run
+        if: steps.mode.outputs.registry_only != 'true'
+        id: run
+        run: |
+          if [ -n "${{ github.event.inputs.run_id }}" ]; then
+            RUN_ID="${{ github.event.inputs.run_id }}"
+          else
+            RUN_ID=$(gh run list \
+              --repo tile-ai/TileOPs \
+              --workflow nightly.yml \
+              --status completed \
+              --limit 1 \
+              --json databaseId \
+              -q '.[0].databaseId')
+          fi
+
+          if [ -z "${RUN_ID}" ]; then
+            echo "::error::No completed nightly run found."
+            exit 1
+          fi
+
+          echo "run_id=${RUN_ID}" >> "$GITHUB_OUTPUT"
+          echo "Using nightly run: ${RUN_ID}"
+
+          gh run view "${RUN_ID}" \
+            --repo tile-ai/TileOPs \
+            --json headSha,createdAt,conclusion \
+            -q '"sha=\(.headSha)\nconclusion=\(.conclusion)"' \
+            >> "$GITHUB_OUTPUT"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # ── Always checkout gh-pages (needed for dedup + report reuse) ───────
+
+      - name: Checkout existing gh-pages
+        run: |
+          git clone --depth 1 --branch gh-pages \
+            "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" \
+            _gh_pages 2>/dev/null \
+            || { mkdir -p _gh_pages/nightly && echo "(gh-pages branch not found, starting fresh)"; }
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Check for duplicate run
+        if: steps.mode.outputs.registry_only != 'true'
+        id: dedup
+        run: |
+          if [ "${{ github.event.inputs.force }}" = "true" ]; then
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+            echo "Force mode — skipping dedup check."
+          else
+            RUN_ID="${{ steps.run.outputs.run_id }}"
+            if grep -rl "^${RUN_ID}$" _gh_pages/nightly/ 2>/dev/null | grep -q "run_id.txt"; then
+              echo "skip=true" >> "$GITHUB_OUTPUT"
+              echo "Run ${RUN_ID} already processed — skipping."
+            else
+              echo "skip=false" >> "$GITHUB_OUTPUT"
+            fi
+          fi
+
+      # ── Registry-only mode: locate latest existing report ────────────────
+
+      - name: Locate latest report directory
+        if: steps.mode.outputs.registry_only == 'true'
+        id: latest
+        run: |
+          LATEST_DIR=$(ls -d _gh_pages/nightly/[0-9]*_[0-9]*/ 2>/dev/null | sort -r | head -1)
+          if [ -z "${LATEST_DIR}" ]; then
+            echo "::error::No existing report found in gh-pages — cannot run registry-only mode."
+            exit 1
+          fi
+          LATEST_DIR="${LATEST_DIR%/}"
+          DIRNAME=$(basename "${LATEST_DIR}")
+          echo "report_dir=${LATEST_DIR}" >> "$GITHUB_OUTPUT"
+          echo "date=${DIRNAME}" >> "$GITHUB_OUTPUT"
+
+          # Extract commit SHA from the existing report if available
+          SHA="unknown"
+          if [ -f "${LATEST_DIR}/run_id.txt" ]; then
+            OLD_RUN_ID=$(cat "${LATEST_DIR}/run_id.txt")
+            SHA=$(gh run view "${OLD_RUN_ID}" --repo tile-ai/TileOPs \
+              --json headSha -q '.headSha' 2>/dev/null || echo "unknown")
+          fi
+          echo "sha=${SHA}" >> "$GITHUB_OUTPUT"
+
+          # Determine test/bench exit from existing data
+          TEST_EXIT=$(python3 -c "
+          import xml.etree.ElementTree as ET
+          try:
+            root = ET.parse('${LATEST_DIR}/test_results.xml').getroot()
+            suites = list(root) if root.tag == 'testsuites' else [root]
+            fails = sum(int(s.get('failures',0))+int(s.get('errors',0)) for s in suites)
+            print(1 if fails > 0 else 0)
+          except: print(1)
+          " 2>/dev/null || echo 1)
+          echo "test_exit=${TEST_EXIT}" >> "$GITHUB_OUTPUT"
+          echo "bench_exit=1" >> "$GITHUB_OUTPUT"
+
+          echo "Reusing latest report: ${DIRNAME} (sha=${SHA})"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # ── Full mode: download artifacts + prepare ──────────────────────────
+
+      - name: Download op_test artifact
+        if: steps.dedup.outputs.skip != 'true' && steps.mode.outputs.registry_only != 'true'
+        uses: dawidd6/action-download-artifact@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          repo: tile-ai/TileOPs
+          run_id: ${{ steps.run.outputs.run_id }}
+          name_is_regexp: true
+          name: tileops_op_test_.*
+          path: dl/op_test/
+          if_no_artifact_found: warn
+
+      - name: Download benchmark artifact
+        if: steps.dedup.outputs.skip != 'true' && steps.mode.outputs.registry_only != 'true'
+        uses: dawidd6/action-download-artifact@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          repo: tile-ai/TileOPs
+          run_id: ${{ steps.run.outputs.run_id }}
+          name_is_regexp: true
+          name: tileops_benchmark_.*
+          path: dl/benchmark/
+          if_no_artifact_found: warn
+
+      - name: Checkout TileOPs source
+        if: steps.dedup.outputs.skip != 'true' && steps.mode.outputs.registry_only != 'true'
+        uses: actions/checkout@v4
+        with:
+          repository: tile-ai/TileOPs
+          path: TileOPs/
+          fetch-depth: 1
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Prepare report directory
+        if: steps.dedup.outputs.skip != 'true' && steps.mode.outputs.registry_only != 'true'
+        id: prep
+        run: |
+          DATE=$(date +%Y%m%d_%H%M%S)
+          echo "date=${DATE}" >> "$GITHUB_OUTPUT"
+
+          REPORT_DIR="_gh_pages/nightly/${DATE}"
+          mkdir -p "${REPORT_DIR}"
+          echo "report_dir=${REPORT_DIR}" >> "$GITHUB_OUTPUT"
+
+          echo "${{ steps.run.outputs.run_id }}" > "${REPORT_DIR}/run_id.txt"
+
+          # dawidd6/action-download-artifact@v3 with name_is_regexp nests files
+          # inside artifact-named subdirectories — flatten them first.
+          find dl/op_test/    -mindepth 2 -type f -exec mv -t dl/op_test/    {} + 2>/dev/null || true
+          find dl/benchmark/  -mindepth 2 -type f -exec mv -t dl/benchmark/  {} + 2>/dev/null || true
+
+          cp dl/op_test/test_results.xml         "${REPORT_DIR}/"                    2>/dev/null || true
+          cp dl/op_test/tileops_op_test.log      "${REPORT_DIR}/test_output.log"     2>/dev/null || true
+          cp dl/benchmark/tileops_benchmarks.log "${REPORT_DIR}/tileops_benchmarks.log" 2>/dev/null || true
+          cp dl/benchmark/tileops_benchmarks.log "${REPORT_DIR}/benchmark_report.md" 2>/dev/null || true
+          cp dl/benchmark/bench_results.xml      "${REPORT_DIR}/bench_results.xml"   2>/dev/null || true
+
+          TEST_EXIT=$(python3 -c "
+          import xml.etree.ElementTree as ET
+          try:
+            root = ET.parse('${REPORT_DIR}/test_results.xml').getroot()
+            suites = list(root) if root.tag == 'testsuites' else [root]
+            fails = sum(int(s.get('failures',0))+int(s.get('errors',0)) for s in suites)
+            print(1 if fails > 0 else 0)
+          except: print(1)
+          " 2>/dev/null || echo 1)
+          echo "test_exit=${TEST_EXIT}" >> "$GITHUB_OUTPUT"
+
+          BENCH_EXIT=$(python3 -c "
+          import xml.etree.ElementTree as ET
+          try:
+            root = ET.parse('${REPORT_DIR}/bench_results.xml').getroot()
+            suites = list(root) if root.tag == 'testsuites' else [root]
+            fails = sum(int(s.get('failures',0))+int(s.get('errors',0)) for s in suites)
+            print(1 if fails > 0 else 0)
+          except: print(1)
+          " 2>/dev/null || echo 1)
+          echo "bench_exit=${BENCH_EXIT}" >> "$GITHUB_OUTPUT"
+
+      # ── Resolve report dir/date/sha for downstream steps ─────────────────
+
+      - name: Set unified report variables
+        id: report
+        run: |
+          if [ "${{ steps.mode.outputs.registry_only }}" = "true" ]; then
+            echo "report_dir=${{ steps.latest.outputs.report_dir }}" >> "$GITHUB_OUTPUT"
+            echo "date=${{ steps.latest.outputs.date }}" >> "$GITHUB_OUTPUT"
+            echo "sha=${{ steps.latest.outputs.sha }}" >> "$GITHUB_OUTPUT"
+            echo "test_exit=${{ steps.latest.outputs.test_exit }}" >> "$GITHUB_OUTPUT"
+            echo "bench_exit=${{ steps.latest.outputs.bench_exit }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "report_dir=${{ steps.prep.outputs.report_dir }}" >> "$GITHUB_OUTPUT"
+            echo "date=${{ steps.prep.outputs.date }}" >> "$GITHUB_OUTPUT"
+            echo "sha=${{ steps.run.outputs.sha }}" >> "$GITHUB_OUTPUT"
+            echo "test_exit=${{ steps.prep.outputs.test_exit }}" >> "$GITHUB_OUTPUT"
+            echo "bench_exit=${{ steps.prep.outputs.bench_exit }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      # ── Shared: should we proceed? ──────────────────────────────────────
+
+      - name: Check if work needed
+        id: go
+        run: |
+          if [ "${{ steps.mode.outputs.registry_only }}" = "true" ]; then
+            echo "proceed=true" >> "$GITHUB_OUTPUT"
+          elif [ "${{ steps.dedup.outputs.skip }}" = "true" ]; then
+            echo "proceed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "proceed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      # ── Registry update (both modes) ─────────────────────────────────────
+
+      - name: Initialize registry if missing
+        if: steps.go.outputs.proceed == 'true' && steps.mode.outputs.registry_only != 'true'
+        continue-on-error: true
+        run: |
+          if [ ! -f scripts/op_registry.json ] || [ ! -d scripts/op_data ]; then
+            echo "op_registry.json 不存在，使用 --skip-claude 生成骨架..."
+            python scripts/bootstrap_registry.py \
+              --manifest    scripts/op_manifest.json \
+              --repo-dir    TileOPs/ \
+              --registry    scripts/op_registry.json \
+              --op-data-dir scripts/op_data/ \
+              --skip-claude
+          fi
+
+      - name: Update op registry
+        if: steps.go.outputs.proceed == 'true'
+        continue-on-error: true
+        run: |
+          EXTRA_ARGS="--test-xml ${{ steps.report.outputs.report_dir }}/test_results.xml"
+          EXTRA_ARGS="${EXTRA_ARGS} --test-log ${{ steps.report.outputs.report_dir }}/test_output.log"
+          EXTRA_ARGS="${EXTRA_ARGS} --bench-log ${{ steps.report.outputs.report_dir }}/tileops_benchmarks.log"
+          EXTRA_ARGS="${EXTRA_ARGS} --bench-xml ${{ steps.report.outputs.report_dir }}/bench_results.xml"
+          if [ "${{ steps.mode.outputs.registry_only }}" != "true" ]; then
+            EXTRA_ARGS="${EXTRA_ARGS} --repo-dir TileOPs/"
+          fi
+          python scripts/update_registry.py \
+            --registry     scripts/op_registry.json \
+            --op-data-dir  scripts/op_data/ \
+            --manifest     scripts/op_manifest.json \
+            ${EXTRA_ARGS} \
+            --tileops-repo tile-ai/TileOPs
+        env:
+          ANTHROPIC_API_KEY:  ${{ secrets.ANTHROPIC_API_KEY }}
+          ANTHROPIC_BASE_URL: ${{ secrets.ANTHROPIC_BASE_URL }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Commit registry updates to main
+        if: steps.go.outputs.proceed == 'true'
+        continue-on-error: true
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add scripts/op_registry.json scripts/op_data/ 2>/dev/null || true
+          if git diff --staged --quiet; then
+            echo "Registry unchanged."
+          else
+            DATE=$(date +%Y%m%d_%H%M%S)
+            SUFFIX="${{ steps.mode.outputs.registry_only == 'true' && 'registry-only' || 'nightly' }}"
+            git commit -m "registry: ${SUFFIX} update ${DATE}"
+            git push origin main
+          fi
+
+      # ── Analyze + generate report (both modes) ──────────────────────────
+
+      - name: Run analyze_report.py
+        if: steps.go.outputs.proceed == 'true'
+        continue-on-error: true
+        run: |
+          python scripts/analyze_report.py \
+            --registry scripts/op_registry.json \
+            --output   "${{ steps.report.outputs.report_dir }}/analysis.json"
+        env:
+          ANTHROPIC_API_KEY:  ${{ secrets.ANTHROPIC_API_KEY }}
+          ANTHROPIC_BASE_URL: ${{ secrets.ANTHROPIC_BASE_URL }}
+
+      - name: Run generate_report.py
+        if: steps.go.outputs.proceed == 'true'
+        continue-on-error: true
+        run: |
+          python scripts/generate_report.py \
+            --date          "${{ steps.report.outputs.date }}" \
+            --commit        "${{ steps.report.outputs.sha }}" \
+            --report-dir    "${{ steps.report.outputs.report_dir }}" \
+            --html-output   "${{ steps.report.outputs.report_dir }}/report.html" \
+            --analysis-json "${{ steps.report.outputs.report_dir }}/analysis.json" \
+            --registry      scripts/op_registry.json
+
+      # ── Send report email ──────────────────────────────────────────────
+
+      - name: Send HTML report email
+        if: steps.go.outputs.proceed == 'true'
+        continue-on-error: true
+        run: |
+          python scripts/send_report_email.py \
+            --html-file "${{ steps.report.outputs.report_dir }}/report.html" \
+            --subject   "TileOPs Nightly Report ${{ steps.report.outputs.date }}" \
+            --to        gaoang0125@163.com
+        env:
+          MAIL_SMTP_SERVER: ${{ secrets.MAIL_SMTP_SERVER }}
+          MAIL_SMTP_PORT:   ${{ secrets.MAIL_SMTP_PORT }}
+          MAIL_USERNAME:    ${{ secrets.MAIL_USERNAME }}
+          MAIL_PASSWORD:    ${{ secrets.MAIL_PASSWORD }}
+
+      - name: Generate and commit README.md
+        if: steps.go.outputs.proceed == 'true'
+        continue-on-error: true
+        run: |
+          python scripts/gen_readme.py \
+            --registry scripts/op_registry.json \
+            --analysis "${{ steps.report.outputs.report_dir }}/analysis.json" \
+            --output   README.md
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add README.md
+          if git diff --staged --quiet; then
+            echo "README unchanged."
+          else
+            git commit -m "docs: update README.md with latest report"
+            git push origin main
+          fi
+
+      # ── Deploy to gh-pages (both modes) ─────────────────────────────────
+
+      - name: Prune reports older than 14 days
+        if: steps.go.outputs.proceed == 'true'
+        run: |
+          CUTOFF=$(date -d "14 days ago" +%Y%m%d)
+          for dir in _gh_pages/nightly/*/; do
+            dirname=$(basename "${dir}")
+            # Directory names are YYYYMMDD_HHMMSS; compare date prefix
+            dir_date="${dirname:0:8}"
+            if [[ "${dir_date}" =~ ^[0-9]{8}$ ]] && [ "${dir_date}" -lt "${CUTOFF}" ]; then
+              echo "Removing old report: ${dirname}"
+              rm -rf "${dir}"
+            fi
+          done
+
+      - name: Generate index.html
+        if: steps.go.outputs.proceed == 'true'
+        run: |
+          python scripts/gen_index.py \
+            --nightly-dir _gh_pages/nightly \
+            --output      _gh_pages/nightly/index.html \
+            --repo-url    "https://github.com/tile-ai/TileOPs"
+
+      - name: Push to gh-pages (orphan)
+        if: steps.go.outputs.proceed == 'true'
+        run: |
+          cd _gh_pages
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout --orphan new_gh_pages
+          git add -A
+          git commit -m "report: ${{ steps.report.outputs.date }}${{ steps.mode.outputs.registry_only == 'true' && ' (registry-only refresh)' || format(' (run {0})', steps.run.outputs.run_id) }}"
+          git push --force \
+            "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" \
+            HEAD:gh-pages
